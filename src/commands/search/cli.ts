@@ -10,14 +10,16 @@ function renderSearchTable(result: SearchResult): void {
     return;
   }
 
-  const header = ["LCSC#", "MPN", "Description", "Package", "Stock", "Price"];
+  const header = ["LCSC#", "Type", "MPN", "Description", "Package", "Stock", "Price", "URL"];
   const rows = result.results.map((r) => [
     r.lcsc,
+    r.library_type === "basic" ? "B" : "E",
     r.mpn,
     r.description.length > 50 ? `${r.description.slice(0, 47)}...` : r.description,
     r.package,
     r.stock.toLocaleString(),
     r.unit_price_usd !== null ? `$${r.unit_price_usd.toFixed(4)}` : "—",
+    r.url ?? "—",
   ]);
 
   const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));

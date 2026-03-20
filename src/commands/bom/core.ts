@@ -4,7 +4,7 @@ import { lookupPart } from "../../services/lcsc.js";
 import { findProjectRoot, readBom, writeBom } from "../../services/project.js";
 
 export interface BomAddOptions {
-  role: string;
+  role?: string;
   category: BomCategory;
   manufacturer?: string;
   mpn?: string;
@@ -59,6 +59,7 @@ export async function bomAdd(opts: BomAddOptions): Promise<BomAddResult> {
   const now = new Date().toISOString();
 
   // Auto-populate from LCSC if a part number is provided
+  let role = opts.role;
   let manufacturer = opts.manufacturer;
   let mpn = opts.mpn;
   let description = opts.description;
@@ -69,6 +70,7 @@ export async function bomAdd(opts: BomAddOptions): Promise<BomAddResult> {
   if (opts.lcsc) {
     const hit = await lookupPart(opts.lcsc);
     if (hit) {
+      role ??= hit.description || opts.lcsc;
       manufacturer ??= hit.manufacturer || undefined;
       mpn ??= hit.mpn || undefined;
       description ??= hit.description || undefined;
@@ -78,9 +80,13 @@ export async function bomAdd(opts: BomAddOptions): Promise<BomAddResult> {
     }
   }
 
+  if (!role) {
+    throw new Error("--role is required (or provide --lcsc to auto-populate)");
+  }
+
   const entry: BomEntry = {
     id: randomUUID(),
-    role: opts.role,
+    role,
     category: opts.category,
     description,
     manufacturer,

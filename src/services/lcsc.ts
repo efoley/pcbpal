@@ -31,6 +31,8 @@ export interface LcscSearchHit {
   stock: number;
   unit_price_usd: number | null;
   datasheet_url: string | null;
+  url: string | null;
+  library_type: "basic" | "extended";
   has_footprint: boolean;
   has_symbol: boolean;
 }
@@ -128,6 +130,8 @@ export async function searchComponents(opts: LcscSearchOptions): Promise<LcscSea
       stock: c.stockCount ?? 0,
       unit_price_usd: lowestPrice === Infinity ? null : lowestPrice,
       datasheet_url: c.dataManualUrl ?? null,
+      url: c.lcscGoodsUrl ?? null,
+      library_type: c.componentLibraryType === "base" ? "basic" : "extended",
       has_footprint: !!c.componentCode,
       has_symbol: !!c.componentCode,
     };

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { exists, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { exists, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readBom, readConfig, readProduction } from "../../services/project.js";
@@ -25,6 +25,7 @@ describe("initProject", () => {
     expect(result.filesCreated).toContain("pcbpal.production.json");
     expect(result.filesCreated).toContain(".pcbpal/");
     expect(result.filesCreated).toContain(".pcbpal/.gitignore");
+    expect(result.filesCreated).toContain("CLAUDE.md");
 
     // Verify files are valid
     const config = await readConfig(testDir);
@@ -66,6 +67,26 @@ describe("initProject", () => {
 
     expect(result.filesCreated).not.toContain(".pcbpal/.gitignore");
     expect(await exists(join(testDir, ".pcbpal", ".gitignore"))).toBe(false);
+  });
+
+  test("creates CLAUDE.md with project name and KiCad reference", async () => {
+    await writeFile(join(testDir, "my-board.kicad_pro"), "{}", "utf-8");
+    const result = await initProject({ dir: testDir });
+
+    expect(result.filesCreated).toContain("CLAUDE.md");
+    const content = await readFile(join(testDir, "CLAUDE.md"), "utf-8");
+    expect(content).toContain("# my-board");
+    expect(content).toContain("my-board.kicad_pro");
+    expect(content).toContain("pcbpal");
+  });
+
+  test("does not overwrite existing CLAUDE.md", async () => {
+    await writeFile(join(testDir, "CLAUDE.md"), "# My custom instructions\n", "utf-8");
+    const result = await initProject({ dir: testDir });
+
+    expect(result.filesCreated).not.toContain("CLAUDE.md");
+    const content = await readFile(join(testDir, "CLAUDE.md"), "utf-8");
+    expect(content).toBe("# My custom instructions\n");
   });
 
   test("throws if already initialized", async () => {

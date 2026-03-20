@@ -108,7 +108,7 @@ export function registerBomCommand(program: Command): void {
   bom
     .command("add")
     .description("Add a component to the BOM")
-    .requiredOption("--role <role>", "Human-readable role (e.g. 'BLE antenna')")
+    .option("--role <role>", "Human-readable role (e.g. 'BLE antenna')")
     .option("--category <cat>", "Component category", "other")
     .option("--manufacturer <name>", "Manufacturer name")
     .option("--mpn <mpn>", "Manufacturer part number")
@@ -120,6 +120,9 @@ export function registerBomCommand(program: Command): void {
     .option("--refs <refs>", "KiCad reference designators (comma-separated)")
     .option("--status <status>", "Initial status", "candidate")
     .action(async (opts) => {
+      if (!opts.role && !opts.lcsc) {
+        fatal("Provide --role or --lcsc (LCSC parts auto-populate the role)");
+      }
       try {
         const result = await bomAdd({
           role: opts.role,

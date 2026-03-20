@@ -10,6 +10,7 @@ import {
   writeConfig,
   writeProduction,
 } from "../../services/project.js";
+import { generateClaudeMd } from "./claude-md-template.js";
 
 export interface InitOptions {
   dir: string;
@@ -99,6 +100,13 @@ export async function initProject(opts: InitOptions): Promise<InitResult> {
       await writeFile(gitignorePath, "*\n!.gitignore\n", "utf-8");
       filesCreated.push(".pcbpal/.gitignore");
     }
+  }
+
+  // Create CLAUDE.md if it doesn't already exist
+  const claudeMdPath = join(dir, "CLAUDE.md");
+  if (!(await exists(claudeMdPath))) {
+    await writeFile(claudeMdPath, generateClaudeMd(projectName, kicadProject), "utf-8");
+    filesCreated.push("CLAUDE.md");
   }
 
   return {

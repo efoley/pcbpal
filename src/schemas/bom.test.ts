@@ -85,7 +85,7 @@ describe("BomDatabase schema", () => {
       "power",
       "mechanical",
       "other",
-    ];
+    ] as const;
     for (const cat of categories) {
       expect(BomCategory.parse(cat)).toBe(cat);
     }
