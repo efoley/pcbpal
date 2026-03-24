@@ -17,8 +17,11 @@
   "dependencies": {
     "@clack/prompts": "^0.9.1",
     "@iarna/toml": "^2.2.5",
+    "circuit-json-to-kicad": "^0.0.87",
+    "circuit-to-svg": "^0.0.338",
     "commander": "^13.1.0",
     "picocolors": "^1.1.1",
+    "tscircuit": "^0.0.1546",
     "zod": "^3.24.2"
   },
   "devDependencies": {

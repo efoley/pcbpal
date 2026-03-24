@@ -12,6 +12,7 @@ layer (what parts, why, production constraints); KiCad owns the implementation
 | `pcbpal.bom.json` | JSON | Bill of materials — the source of truth for component selection |
 | `pcbpal.production.json` | JSON | Board specs, stackup, impedance profiles, fab/assembly settings |
 | `.pcbpal/` | — | Cache directory (gitignored). Downloaded symbols, footprints, API cache |
+| `subcircuits/` | TSX | tscircuit subcircuit definitions (optional) |
 
 Do not hand-edit the JSON files — use pcbpal commands so that validation
 (Zod schemas) runs on every read/write.
@@ -55,6 +56,45 @@ pcbpal bom link <id-or-prefix> C1,C2,C3   # associate KiCad reference designator
 ```bash
 pcbpal lib fetch C1525               # downloads .kicad_sym and .kicad_mod into .pcbpal/
 ```
+
+### Subcircuits (tscircuit)
+
+Subcircuits are reusable circuit blocks defined as TSX files using tscircuit
+components (`<board>`, `<resistor>`, `<capacitor>`, `<trace>`, etc.). pcbpal
+compiles them to Circuit JSON, renders previews, and exports to KiCad format.
+
+```bash
+pcbpal sub new voltage-divider       # scaffold subcircuits/voltage-divider.tsx
+pcbpal sub list                      # list all subcircuits and build status
+pcbpal sub build voltage-divider     # compile TSX → Circuit JSON (.pcbpal/builds/)
+pcbpal sub build --all               # build all subcircuits
+pcbpal sub preview voltage-divider   # render schematic SVG (.pcbpal/preview/)
+pcbpal sub preview voltage-divider --view pcb   # PCB layout SVG
+pcbpal sub export voltage-divider    # export to .kicad_sch
+pcbpal sub export voltage-divider --format kicad_pcb  # export to .kicad_pcb
+```
+
+Subcircuit TSX files use standard tscircuit JSX. Example:
+
+```tsx
+export const VoltageDivider = () => (
+  <board width="12mm" height="8mm">
+    <resistor name="R1" resistance="10k" footprint="0402" />
+    <resistor name="R2" resistance="10k" footprint="0402" />
+    <trace from=".R1 > .pin2" to=".R2 > .pin1" />
+  </board>
+)
+export default VoltageDivider
+```
+
+The workflow for subcircuits:
+1. `pcbpal sub new <name>` — creates a template TSX file
+2. Edit the TSX file to define your circuit
+3. `pcbpal sub build <name>` — compiles and validates (reports component/net counts, errors)
+4. `pcbpal sub preview <name>` — renders an SVG to visually inspect
+5. `pcbpal sub export <name>` — generates a `.kicad_sch` you can include as a hierarchical sheet
+
+No need to install tscircuit in your project — pcbpal handles it.
 
 ### Health check
 
