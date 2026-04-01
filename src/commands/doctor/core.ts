@@ -104,7 +104,31 @@ export async function runDoctor(): Promise<DoctorResult> {
     message: cacheExists ? "Exists" : "Missing — run `pcbpal init`",
   });
 
-  // Check 7: KiCad CLI available
+  // Check 7: easyeda2kicad available
+  try {
+    const e2kProc = Bun.spawn(["easyeda2kicad", "--help"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    await new Response(e2kProc.stdout).text();
+    const e2kExit = await e2kProc.exited;
+    checks.push({
+      name: "easyeda2kicad",
+      ok: e2kExit === 0,
+      message:
+        e2kExit === 0
+          ? "Found"
+          : "easyeda2kicad returned an error",
+    });
+  } catch {
+    checks.push({
+      name: "easyeda2kicad",
+      ok: false,
+      message: "Not found — install with: pipx install easyeda2kicad",
+    });
+  }
+
+  // Check 8: KiCad CLI available
   try {
     const proc = Bun.spawn(["kicad-cli", "--version"], {
       stdout: "pipe",

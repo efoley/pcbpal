@@ -54,8 +54,18 @@ pcbpal bom link <id-or-prefix> C1,C2,C3   # associate KiCad reference designator
 ### Fetch KiCad symbols and footprints
 
 ```bash
-pcbpal lib fetch C1525               # downloads .kicad_sym and .kicad_mod into .pcbpal/
+pcbpal lib fetch C1525               # downloads symbol, footprint, and 3D model into .pcbpal/lib/
+pcbpal lib fetch C1525 --symbol      # symbol only (.kicad_sym)
+pcbpal lib fetch C1525 --footprint   # footprint only (.pretty/)
+pcbpal lib fetch C1525 --3d          # 3D model only (.wrl)
 ```
+
+Files are written to `.pcbpal/lib/<LCSC>.kicad_sym`, `.pcbpal/lib/<LCSC>.pretty/`,
+and `.pcbpal/lib/<LCSC>.wrl`. Add `.pcbpal/lib/` to your KiCad symbol and
+footprint library paths to use them in schematics and layout.
+
+Requires `easyeda2kicad` (`pipx install easyeda2kicad`). Run `pcbpal doctor`
+to check that it's installed.
 
 ### Subcircuits (tscircuit)
 

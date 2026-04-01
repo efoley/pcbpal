@@ -1,19 +1,41 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { fetchComponentDetail } from "../../services/lcsc.js";
 import { findProjectRoot } from "../../services/project.js";
 
 export interface LibFetchOptions {
   lcsc: string;
+  symbol?: boolean;
+  footprint?: boolean;
+  model3d?: boolean;
 }
 
 export interface LibFetchResult {
   ok: true;
   lcsc: string;
-  mpn: string;
-  description: string;
   symbolPath: string | null;
-  footprintPath: string | null;
+  footprintDir: string | null;
+  modelPath: string | null;
+}
+
+/** Check whether easyeda2kicad is installed and callable. */
+export async function checkEasyeda2kicad(): Promise<{ ok: boolean; message: string }> {
+  try {
+    const proc = Bun.spawn(["easyeda2kicad", "--help"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    await new Response(proc.stdout).text();
+    const exitCode = await proc.exited;
+    return exitCode === 0
+      ? { ok: true, message: "easyeda2kicad is installed" }
+      : { ok: false, message: "easyeda2kicad returned an error" };
+  } catch {
+    return {
+      ok: false,
+      message:
+        "easyeda2kicad not found — install with: pipx install easyeda2kicad",
+    };
+  }
 }
 
 export async function libFetch(opts: LibFetchOptions): Promise<LibFetchResult> {
@@ -22,34 +44,61 @@ export async function libFetch(opts: LibFetchOptions): Promise<LibFetchResult> {
     throw new Error("Not in a pcbpal project (no pcbpal.toml found)");
   }
 
-  // Fetch component detail from LCSC
-  const detail = await fetchComponentDetail(opts.lcsc);
-
-  let symbolPath: string | null = null;
-  let footprintPath: string | null = null;
-
-  // Save symbol data if available
-  if (detail.symbol) {
-    const symDir = join(root, ".pcbpal", "symbols");
-    await mkdir(symDir, { recursive: true });
-    symbolPath = join(symDir, `${opts.lcsc}.json`);
-    await writeFile(symbolPath, JSON.stringify(detail.symbol, null, 2), "utf-8");
+  const check = await checkEasyeda2kicad();
+  if (!check.ok) {
+    throw new Error(check.message);
   }
 
-  // Save footprint data if available
-  if (detail.footprint) {
-    const fpDir = join(root, ".pcbpal", "footprints");
-    await mkdir(fpDir, { recursive: true });
-    footprintPath = join(fpDir, `${opts.lcsc}.json`);
-    await writeFile(footprintPath, JSON.stringify(detail.footprint, null, 2), "utf-8");
+  // Default: fetch everything
+  const fetchAll = !opts.symbol && !opts.footprint && !opts.model3d;
+
+  const libDir = join(root, ".pcbpal", "lib");
+  await mkdir(libDir, { recursive: true });
+
+  const args = ["easyeda2kicad", "--lcsc_id", opts.lcsc, "--output", join(libDir, opts.lcsc)];
+
+  if (fetchAll || opts.symbol) args.push("--symbol");
+  if (fetchAll || opts.footprint) args.push("--footprint");
+  if (fetchAll || opts.model3d) args.push("--3d");
+
+  const proc = Bun.spawn(args, {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const stdout = await new Response(proc.stdout).text();
+  const stderr = await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    const msg = stderr.trim() || stdout.trim() || "easyeda2kicad failed";
+    throw new Error(`easyeda2kicad exited with code ${exitCode}: ${msg}`);
+  }
+
+  // easyeda2kicad writes files based on --output prefix:
+  //   <output>.kicad_sym  (symbol library)
+  //   <output>.pretty/    (footprint library dir containing .kicad_mod files)
+  //   <output>.wrl        (3D model)
+  const { exists } = await import("node:fs/promises");
+
+  const symPath = join(libDir, `${opts.lcsc}.kicad_sym`);
+  const fpDir = join(libDir, `${opts.lcsc}.pretty`);
+  const modelPath = join(libDir, `${opts.lcsc}.wrl`);
+
+  const symbolPath = (await exists(symPath)) ? symPath : null;
+  const footprintDir = (await exists(fpDir)) ? fpDir : null;
+  const modelResult = (await exists(modelPath)) ? modelPath : null;
+
+  if (!symbolPath && !footprintDir && !modelResult) {
+    throw new Error(
+      `easyeda2kicad produced no output files for ${opts.lcsc} — component may not exist`,
+    );
   }
 
   return {
     ok: true,
     lcsc: opts.lcsc,
-    mpn: detail.mpn,
-    description: detail.description,
     symbolPath,
-    footprintPath,
+    footprintDir,
+    modelPath: modelResult,
   };
 }

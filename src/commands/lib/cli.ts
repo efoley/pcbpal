@@ -7,18 +7,15 @@ import { type LibFetchResult, libFetch } from "./core.js";
 
 function renderFetchResult(result: LibFetchResult): void {
   if (isInteractive()) {
-    clack.log.success(`Fetched ${pc.bold(result.lcsc)} — ${result.mpn}`);
-    clack.log.info(result.description);
-    if (result.symbolPath) clack.log.info(`Symbol: ${pc.cyan(result.symbolPath)}`);
-    if (result.footprintPath) clack.log.info(`Footprint: ${pc.cyan(result.footprintPath)}`);
-    if (!result.symbolPath && !result.footprintPath) {
-      clack.log.warn("No symbol or footprint data available for this part");
-    }
+    clack.log.success(`Fetched ${pc.bold(result.lcsc)}`);
+    if (result.symbolPath) clack.log.info(`Symbol:    ${pc.cyan(result.symbolPath)}`);
+    if (result.footprintDir) clack.log.info(`Footprint: ${pc.cyan(result.footprintDir)}`);
+    if (result.modelPath) clack.log.info(`3D model:  ${pc.cyan(result.modelPath)}`);
   } else {
-    console.log(`Fetched ${result.lcsc} — ${result.mpn}`);
-    console.log(result.description);
+    console.log(`Fetched ${result.lcsc}`);
     if (result.symbolPath) console.log(`Symbol: ${result.symbolPath}`);
-    if (result.footprintPath) console.log(`Footprint: ${result.footprintPath}`);
+    if (result.footprintDir) console.log(`Footprint: ${result.footprintDir}`);
+    if (result.modelPath) console.log(`3D model: ${result.modelPath}`);
   }
 }
 
@@ -28,9 +25,15 @@ export function registerLibCommand(program: Command): void {
   lib
     .command("fetch <lcsc>")
     .description("Download symbol + footprint from LCSC/EasyEDA")
-    .action(async (lcsc: string) => {
+    .option("--symbol", "Fetch symbol only")
+    .option("--footprint", "Fetch footprint only")
+    .option("--3d", "Fetch 3D model only")
+    .action(async (lcsc: string, flags: { symbol?: boolean; footprint?: boolean; "3d"?: boolean }) => {
       try {
-        const result = await runWithSpinner(() => libFetch({ lcsc }), `Fetching ${lcsc}...`);
+        const result = await runWithSpinner(
+          () => libFetch({ lcsc, symbol: flags.symbol, footprint: flags.footprint, model3d: flags["3d"] }),
+          `Fetching ${lcsc}...`,
+        );
         output(result, renderFetchResult);
       } catch (e) {
         fatal((e as Error).message);
