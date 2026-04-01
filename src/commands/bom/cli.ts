@@ -13,6 +13,7 @@ import {
   bomRemove,
   bomShow,
 } from "./core.js";
+import { type BomCheckResult, type BomIssue, bomCheck } from "./check.js";
 
 function renderBomTable(result: BomShowResult): void {
   if (result.entries.length === 0) {
@@ -83,6 +84,48 @@ function renderLinkResult(result: BomLinkResult): void {
     clack.log.success(`Linked ${pc.bold(e.role)} to refs: ${pc.cyan(e.kicad_refs.join(", "))}`);
   } else {
     console.log(`Linked ${e.role} to refs: ${e.kicad_refs.join(", ")}`);
+  }
+}
+
+const SEVERITY_ICON: Record<string, string> = {
+  error: "x",
+  warning: "!",
+  info: "-",
+};
+
+function renderCheckResult(result: BomCheckResult): void {
+  if (isInteractive()) {
+    if (result.total_entries === 0) {
+      clack.log.info("BOM is empty — nothing to check.");
+      return;
+    }
+
+    const summary = result.ok
+      ? pc.green("All checks passed")
+      : pc.red(`${result.errors} error(s), ${result.warnings} warning(s)`);
+    clack.log.info(`Checked ${result.total_entries} BOM entries. ${summary}`);
+
+    if (result.entries_checked > 0) {
+      clack.log.info(`Verified ${result.entries_checked} parts against LCSC API`);
+    }
+
+    for (const i of result.issues) {
+      const refStr = i.refs.length > 0 ? ` [${i.refs.join(", ")}]` : "";
+      const prefix = i.severity === "error" ? pc.red("ERR") : i.severity === "warning" ? pc.yellow("WARN") : pc.dim("INFO");
+      console.log(`  ${prefix} ${pc.bold(i.entry_role)}${pc.dim(refStr)}: ${i.message}`);
+    }
+  } else {
+    if (result.total_entries === 0) {
+      console.log("BOM is empty");
+      return;
+    }
+    for (const i of result.issues) {
+      const refStr = i.refs.length > 0 ? ` [${i.refs.join(", ")}]` : "";
+      console.log(`${SEVERITY_ICON[i.severity]} ${i.entry_role}${refStr}: ${i.message}`);
+    }
+    console.log(
+      `\n${result.total_entries} entries, ${result.errors} errors, ${result.warnings} warnings`,
+    );
   }
 }
 
@@ -163,6 +206,36 @@ export function registerBomCommand(program: Command): void {
         const refList = refs.split(",").map((r) => r.trim());
         const result = await bomLink(id, refList);
         output(result, renderLinkResult);
+      } catch (e) {
+        fatal((e as Error).message);
+      }
+    });
+
+  bom
+    .command("check")
+    .description("Verify BOM: check stock, packages, refs, and consistency")
+    .option("--offline", "Skip LCSC API checks (local validation only)")
+    .option("--from-jlcpcb", "Read BOM from jlcpcb/project.db instead of pcbpal.bom.json")
+    .action(async (opts: { offline?: boolean; fromJlcpcb?: boolean }) => {
+      try {
+        let spinner: ReturnType<typeof clack.spinner> | null = null;
+        if (isInteractive() && !opts.offline) {
+          spinner = clack.spinner();
+          spinner.start("Checking BOM against LCSC...");
+        }
+
+        const result = await bomCheck(
+          { offline: opts.offline, fromJlcpcb: opts.fromJlcpcb },
+          spinner
+            ? (checked, total) => {
+                spinner!.message(`Checking parts ${checked}/${total}...`);
+              }
+            : undefined,
+        );
+
+        if (spinner) spinner.stop("Done");
+        output(result, renderCheckResult);
+        if (!result.ok) process.exit(1);
       } catch (e) {
         fatal((e as Error).message);
       }

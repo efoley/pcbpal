@@ -49,7 +49,20 @@ pcbpal bom add --role "Board-to-board connector" --category connector --mpn "DF4
 # Remove and link
 pcbpal bom remove <id-or-prefix>
 pcbpal bom link <id-or-prefix> C1,C2,C3   # associate KiCad reference designators
+
+# Verify BOM
+pcbpal bom check                     # check stock, packages, refs against LCSC + schematic
+pcbpal bom check --offline           # local-only checks (no API calls)
 ```
+
+`bom check` reads the KiCad schematic to cross-reference footprints. It verifies:
+- Every BOM entry has a supplier source and linked KiCad refs
+- Linked refs exist in the schematic
+- All refs for an entry use the same footprint
+- LCSC package names roughly match the KiCad footprint assigned in the schematic
+- Parts are in stock on LCSC (online mode)
+- Extended parts are flagged (higher JLCPCB assembly fee)
+- No duplicate ref assignments across entries
 
 ### Fetch KiCad symbols and footprints
 
@@ -109,7 +122,7 @@ No need to install tscircuit in your project — pcbpal handles it.
 ### Health check
 
 ```bash
-pcbpal doctor                        # validates all project files, checks kicad-cli
+pcbpal doctor                        # validates all project files, checks kicad-cli, easyeda2kicad
 ```
 
 ## BOM data model
@@ -148,9 +161,10 @@ When selecting components:
 5. Once finalized, update status to `selected`
 6. Use `pcbpal lib fetch` to get the KiCad symbol/footprint
 7. Link to schematic refs with `pcbpal bom link`
+8. Run `pcbpal bom check` to verify stock, footprint matching, and consistency
 
-When reviewing the BOM, check:
-- All entries have a source with stock > 0
-- No duplicate roles without justification
-- Controlled-impedance nets have matching profiles in production config
-- `pcbpal doctor` passes cleanly
+When reviewing the BOM, run `pcbpal bom check` — it will:
+- Cross-reference linked refs against the KiCad schematic
+- Verify LCSC packages match the schematic footprints
+- Flag out-of-stock or extended parts
+- Catch duplicate ref assignments and missing sources
