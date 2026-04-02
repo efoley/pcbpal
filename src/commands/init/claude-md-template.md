@@ -64,6 +64,30 @@ pcbpal bom check --offline           # local-only checks (no API calls)
 - Extended parts are flagged (higher JLCPCB assembly fee)
 - No duplicate ref assignments across entries
 
+All `bom` subcommands support `--from-jlcpcb` to read the BOM from the
+JLCPCB KiCad plugin's `jlcpcb/project.db` instead of `pcbpal.bom.json`.
+If the pcbpal BOM is empty and `jlcpcb/project.db` exists, `bom check`
+auto-detects it.
+
+#### Footprint geometry check
+
+```bash
+pcbpal bom footprint-check                   # compare KiCad vs LCSC footprint geometry
+pcbpal bom footprint-check --refs U2,J1      # check specific components only
+pcbpal bom footprint-check --no-render       # skip SVG rendering
+pcbpal bom footprint-check --from-jlcpcb     # read BOM from JLCPCB plugin DB
+```
+
+`footprint-check` downloads the LCSC footprint for each component (via
+`easyeda2kicad`), parses the `.kicad_mod` geometry, and compares:
+- Pad count
+- Bounding box dimensions
+- Per-pad position and size (matched by pad number)
+
+For mismatches and unclear results, it renders both footprints to SVG
+(with colored layers: copper, silkscreen, paste, courtyard) in
+`.pcbpal/footprint-check/<ref>/` for side-by-side visual inspection.
+
 ### Fetch KiCad symbols and footprints
 
 ```bash
@@ -119,6 +143,44 @@ The workflow for subcircuits:
 
 No need to install tscircuit in your project — pcbpal handles it.
 
+### Production export
+
+```bash
+pcbpal production export                     # generate JLCPCB BOM + CPL CSV files
+pcbpal production export --from-jlcpcb       # use JLCPCB plugin DB for part assignments
+pcbpal production export --use-drill-origin  # use drill/place file origin for positions
+pcbpal production export --output ./output   # custom output directory
+```
+
+Generates JLCPCB-format BOM and CPL (component placement list) CSV files
+in `.pcbpal/production/`. Uses `kicad-cli pcb export pos` to read component
+positions from the board file, then applies placement corrections from
+`pcbpal.production.json`.
+
+#### Placement corrections
+
+KiCad and JLCPCB often disagree on the 0-degree orientation for a given
+footprint (e.g. SOT-23 may need a 180° correction). Add corrections to
+`pcbpal.production.json`:
+
+```json
+"placement_corrections": [
+  { "pattern": "SOT-23$", "match_on": "footprint", "rotation": 180 },
+  { "pattern": "SOT-23-[56]", "match_on": "footprint", "rotation": 90 },
+  { "pattern": "SOIC-", "match_on": "footprint", "rotation": 90 }
+]
+```
+
+Each correction has:
+- **pattern** — regex matched against the footprint name, reference, or value
+- **match_on** — what to match: `footprint` (default), `reference`, or `value`
+- **rotation** — degrees to add to KiCad's rotation
+- **offset_x**, **offset_y** — positional adjustment in mm (optional)
+
+Use `pcbpal bom footprint-check` to detect rotation differences between
+KiCad and LCSC footprints — the "unclear" results are often pure rotation
+offsets that should become placement corrections.
+
 ### Health check
 
 ```bash
@@ -150,6 +212,7 @@ Each BOM entry has:
 - **Controlled impedance** — profiles with target ohms, trace geometry, net classes
 - **Fabrication** — fab house, quantity, panelization, notes
 - **Assembly** — assembly house, which sides, manual placement parts
+- **Placement corrections** — per-footprint rotation/offset corrections for JLCPCB CPL
 
 ## Workflow guidance
 

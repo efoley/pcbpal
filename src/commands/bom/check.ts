@@ -36,7 +36,7 @@ export interface BomCheckOptions {
  * Groups rows by LCSC part number so each unique part becomes one BOM entry
  * with all its reference designators.
  */
-async function readJlcpcbDb(projectDir: string): Promise<BomDatabase> {
+export async function readJlcpcbDb(projectDir: string): Promise<BomDatabase> {
   const dbPath = join(projectDir, "jlcpcb", "project.db");
   if (!(await exists(dbPath))) {
     throw new Error(`JLCPCB plugin database not found at ${dbPath}`);

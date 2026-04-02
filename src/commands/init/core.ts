@@ -85,6 +85,7 @@ export async function initProject(opts: InitOptions): Promise<InitResult> {
       panelization: false,
       notes: [],
     },
+    placement_corrections: [],
   };
   await writeProduction(dir, production);
   filesCreated.push("pcbpal.production.json");

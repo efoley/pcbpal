@@ -6,6 +6,7 @@ import { registerDoctorCommand } from "../commands/doctor/cli.js";
 import { registerInitCommand } from "../commands/init/cli.js";
 import { registerLibCommand } from "../commands/lib/cli.js";
 import { registerSearchCommand } from "../commands/search/cli.js";
+import { registerProductionCommand } from "../commands/production/cli.js";
 import { registerSubCommand } from "../commands/sub/cli.js";
 
 const program = new Command();
@@ -22,6 +23,7 @@ registerSearchCommand(program);
 registerBomCommand(program);
 registerLibCommand(program);
 registerSubCommand(program);
+registerProductionCommand(program);
 registerDoctorCommand(program);
 
 program.parse();

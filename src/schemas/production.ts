@@ -51,6 +51,21 @@ export const ControlledImpedance = z.object({
 
 export type ControlledImpedance = z.infer<typeof ControlledImpedance>;
 
+export const PlacementCorrection = z.object({
+  /** Regex pattern to match against footprint name, reference, or value. */
+  pattern: z.string(),
+  /** What the pattern matches against. */
+  match_on: z.enum(["footprint", "reference", "value"]).default("footprint"),
+  /** Rotation correction in degrees (added to KiCad rotation). */
+  rotation: z.number().default(0),
+  /** X offset in mm. */
+  offset_x: z.number().default(0),
+  /** Y offset in mm. */
+  offset_y: z.number().default(0),
+});
+
+export type PlacementCorrection = z.infer<typeof PlacementCorrection>;
+
 export const ProductionConfig = z.object({
   schema_version: z.literal(1),
   board: z.object({
@@ -76,6 +91,7 @@ export const ProductionConfig = z.object({
       manual_parts: z.array(z.string()).default([]),
     })
     .optional(),
+  placement_corrections: z.array(PlacementCorrection).default([]),
 });
 
 export type ProductionConfig = z.infer<typeof ProductionConfig>;

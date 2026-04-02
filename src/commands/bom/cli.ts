@@ -14,6 +14,7 @@ import {
   bomShow,
 } from "./core.js";
 import { type BomCheckResult, type BomIssue, bomCheck } from "./check.js";
+import { type FpCheckResult, footprintCheck } from "./footprint-check.js";
 
 function renderBomTable(result: BomShowResult): void {
   if (result.entries.length === 0) {
@@ -240,4 +241,89 @@ export function registerBomCommand(program: Command): void {
         fatal((e as Error).message);
       }
     });
+
+  bom
+    .command("footprint-check")
+    .description("Compare KiCad footprints against LCSC footprints (geometry + SVG)")
+    .option("--refs <refs>", "Only check specific refs (comma-separated)")
+    .option("--no-render", "Skip SVG rendering")
+    .option("--from-jlcpcb", "Read BOM from jlcpcb/project.db")
+    .action(
+      async (opts: { refs?: string; render?: boolean; fromJlcpcb?: boolean }) => {
+        try {
+          let spinner: ReturnType<typeof clack.spinner> | null = null;
+          if (isInteractive()) {
+            spinner = clack.spinner();
+            spinner.start("Checking footprints...");
+          }
+
+          const result = await footprintCheck(
+            {
+              refs: opts.refs?.split(",").map((r) => r.trim()),
+              noRender: opts.render === false,
+              fromJlcpcb: opts.fromJlcpcb,
+            },
+            spinner ? (msg) => spinner!.message(msg) : undefined,
+          );
+
+          if (spinner) spinner.stop("Done");
+          output(result, renderFpCheckResult);
+          if (!result.ok) process.exit(1);
+        } catch (e) {
+          fatal((e as Error).message);
+        }
+      },
+    );
+}
+
+function renderFpCheckResult(result: FpCheckResult): void {
+  const summaryColors: Record<string, (s: string) => string> = {
+    match: pc.green,
+    likely_match: pc.green,
+    mismatch: pc.red,
+    unclear: pc.yellow,
+  };
+
+  for (const entry of result.entries) {
+    if (entry.error) {
+      console.log(`  ${pc.yellow("?")} ${pc.bold(entry.ref)} ${pc.dim(entry.kicadFootprint)}: ${entry.error}`);
+      continue;
+    }
+
+    if (!entry.comparison) continue;
+
+    const color = summaryColors[entry.comparison.summary] ?? pc.dim;
+    const label = color(entry.comparison.summary.toUpperCase());
+    const pads = `${entry.comparison.kicadPadCount}/${entry.comparison.lcscPadCount} pads`;
+
+    if (isInteractive()) {
+      console.log(`  ${label} ${pc.bold(entry.ref)} ${pc.dim(`${entry.value} — ${entry.kicadFootprint}`)} [${pads}]`);
+    } else {
+      console.log(`${entry.comparison.summary} ${entry.ref} ${entry.kicadFootprint} [${pads}]`);
+    }
+
+    for (const issue of entry.comparison.padIssues) {
+      console.log(`       ${pc.dim(issue)}`);
+    }
+
+    if (entry.kicadSvg || entry.lcscSvg) {
+      if (entry.kicadSvg) console.log(`       KiCad SVG: ${pc.cyan(entry.kicadSvg)}`);
+      if (entry.lcscSvg) console.log(`       LCSC SVG:  ${pc.cyan(entry.lcscSvg)}`);
+    }
+  }
+
+  console.log();
+  if (isInteractive()) {
+    const parts = [
+      result.matches > 0 ? pc.green(`${result.matches} match`) : null,
+      result.likelyMatches > 0 ? pc.green(`${result.likelyMatches} likely`) : null,
+      result.mismatches > 0 ? pc.red(`${result.mismatches} mismatch`) : null,
+      result.errors > 0 ? pc.yellow(`${result.errors} errors`) : null,
+    ].filter(Boolean);
+    console.log(`  ${parts.join(", ")}`);
+  } else {
+    console.log(
+      `${result.matches} match, ${result.likelyMatches} likely, ${result.mismatches} mismatch, ${result.errors} errors`,
+    );
+  }
 }
