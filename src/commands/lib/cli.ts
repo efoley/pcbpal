@@ -3,7 +3,7 @@ import type { Command } from "commander";
 import pc from "picocolors";
 import { isInteractive } from "../../cli/context.js";
 import { fatal, output, runWithSpinner } from "../../cli/output.js";
-import { type LibFetchResult, libFetch } from "./core.js";
+import { type LibFetchResult, type LibInstallResult, libFetch, libInstall } from "./core.js";
 
 function renderFetchResult(result: LibFetchResult): void {
   if (isInteractive()) {
@@ -39,4 +39,45 @@ export function registerLibCommand(program: Command): void {
         fatal((e as Error).message);
       }
     });
+
+  lib
+    .command("install")
+    .description("Add fetched libraries to KiCad's sym-lib-table and fp-lib-table")
+    .action(async () => {
+      try {
+        const result = await runWithSpinner(() => libInstall(), "Installing libraries...");
+        output(result, renderInstallResult);
+      } catch (e) {
+        fatal((e as Error).message);
+      }
+    });
+}
+
+function renderInstallResult(result: LibInstallResult): void {
+  if (isInteractive()) {
+    const symTotal = result.symbolsAdded.length + result.symbolsExisting;
+    const fpTotal = result.footprintsAdded.length + result.footprintsExisting;
+
+    if (result.symbolsAdded.length > 0) {
+      clack.log.success(`Added ${result.symbolsAdded.length} symbol libraries`);
+    }
+    if (result.footprintsAdded.length > 0) {
+      clack.log.success(`Added ${result.footprintsAdded.length} footprint libraries`);
+    }
+    if (result.symbolsAdded.length === 0 && result.footprintsAdded.length === 0) {
+      clack.log.info(`All ${symTotal} symbol and ${fpTotal} footprint libraries already installed`);
+    } else {
+      if (result.symbolsExisting > 0 || result.footprintsExisting > 0) {
+        clack.log.info(
+          `${result.symbolsExisting} symbol and ${result.footprintsExisting} footprint libraries already present`,
+        );
+      }
+    }
+  } else {
+    for (const name of result.symbolsAdded) console.log(`+ sym ${name}`);
+    for (const name of result.footprintsAdded) console.log(`+ fp  ${name}`);
+    console.log(
+      `${result.symbolsAdded.length} symbols added, ${result.footprintsAdded.length} footprints added`,
+    );
+  }
 }
