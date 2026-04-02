@@ -146,16 +146,22 @@ No need to install tscircuit in your project — pcbpal handles it.
 ### Production export
 
 ```bash
-pcbpal production export                     # generate JLCPCB BOM + CPL CSV files
+pcbpal production export                     # generate gerbers + drill + BOM + CPL + ZIP
 pcbpal production export --from-jlcpcb       # use JLCPCB plugin DB for part assignments
 pcbpal production export --use-drill-origin  # use drill/place file origin for positions
 pcbpal production export --output ./output   # custom output directory
 ```
 
-Generates JLCPCB-format BOM and CPL (component placement list) CSV files
-in `.pcbpal/production/`. Uses `kicad-cli pcb export pos` to read component
-positions from the board file, then applies placement corrections from
-`pcbpal.production.json`.
+Generates a complete JLCPCB submission package in `.pcbpal/production/`:
+- **Gerbers** — all copper layers (auto-detected from board), silkscreen,
+  solder mask, paste, edge cuts
+- **Drill files** — Excellon format, separate PTH and NPTH
+- **BOM CSV** — JLCPCB format (Comment, Designator, Footprint, LCSC, Quantity)
+- **CPL CSV** — JLCPCB format (Designator, Val, Package, Mid X, Mid Y, Rotation, Layer)
+- **ZIP** — gerbers + drill files bundled for upload
+
+Uses `kicad-cli` for gerber/drill/position export and applies placement
+corrections from `pcbpal.production.json` to the CPL.
 
 #### Placement corrections
 

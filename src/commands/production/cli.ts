@@ -8,16 +8,20 @@ import { type ExportResult, productionExport } from "./core.js";
 function renderExportResult(result: ExportResult): void {
   if (isInteractive()) {
     clack.log.success("Production files generated");
-    clack.log.info(`BOM: ${pc.cyan(result.bomCsvPath)} (${result.bomEntries} unique parts)`);
-    clack.log.info(`CPL: ${pc.cyan(result.cplCsvPath)} (${result.cplEntries} placements)`);
+    clack.log.info(`Gerbers: ${pc.cyan(result.gerberDir)} (${result.gerberFiles} files)`);
+    clack.log.info(`BOM:     ${pc.cyan(result.bomCsvPath)} (${result.bomEntries} unique parts)`);
+    clack.log.info(`CPL:     ${pc.cyan(result.cplCsvPath)} (${result.cplEntries} placements)`);
+    clack.log.info(`ZIP:     ${pc.cyan(result.zipPath)}`);
     if (result.correctionsApplied > 0) {
       clack.log.info(
         `Rotation corrections applied to ${result.correctionsApplied} components`,
       );
     }
   } else {
+    console.log(`Gerbers: ${result.gerberDir} (${result.gerberFiles} files)`);
     console.log(`BOM: ${result.bomCsvPath} (${result.bomEntries} parts)`);
     console.log(`CPL: ${result.cplCsvPath} (${result.cplEntries} placements)`);
+    console.log(`ZIP: ${result.zipPath}`);
     if (result.correctionsApplied > 0) {
       console.log(`Corrections applied: ${result.correctionsApplied}`);
     }

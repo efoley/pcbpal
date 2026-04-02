@@ -1,7 +1,6 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 import type { PlacementCorrection } from "../../schemas/production.js";
-import { readSchematicComponents } from "../../services/kicad.js";
 import {
   findProjectRoot,
   readBom,
@@ -24,8 +23,11 @@ export interface ExportResult {
   ok: true;
   bomCsvPath: string;
   cplCsvPath: string;
+  gerberDir: string;
+  zipPath: string;
   bomEntries: number;
   cplEntries: number;
+  gerberFiles: number;
   correctionsApplied: number;
 }
 
@@ -171,6 +173,98 @@ function buildBomCsv(
   return rows.sort((a, b) => a.comment.localeCompare(b.comment));
 }
 
+// ── Gerber + drill export ──
+
+/**
+ * Detect copper layers used in the PCB file by scanning for In*.Cu references.
+ */
+async function detectCopperLayers(pcbPath: string): Promise<string[]> {
+  const content = await readFile(pcbPath, "utf-8");
+  const innerLayers = [...new Set(content.match(/In\d+\.Cu/g) ?? [])].sort();
+  return ["F.Cu", ...innerLayers, "B.Cu"];
+}
+
+const STANDARD_LAYERS = [
+  "F.SilkS",
+  "B.SilkS",
+  "F.Mask",
+  "B.Mask",
+  "F.Paste",
+  "B.Paste",
+  "Edge.Cuts",
+];
+
+async function exportGerbers(
+  pcbPath: string,
+  outDir: string,
+  useDrillOrigin: boolean,
+): Promise<string[]> {
+  const copperLayers = await detectCopperLayers(pcbPath);
+  const allLayers = [...copperLayers, ...STANDARD_LAYERS];
+
+  // Export gerbers
+  const gerberArgs = [
+    "kicad-cli", "pcb", "export", "gerbers",
+    pcbPath,
+    "-o", outDir + "/",
+    "--layers", allLayers.join(","),
+    "--no-x2",
+    "--subtract-soldermask",
+  ];
+  if (useDrillOrigin) gerberArgs.push("--use-drill-file-origin");
+
+  const gerberProc = Bun.spawn(gerberArgs, { stdout: "pipe", stderr: "pipe" });
+  await new Response(gerberProc.stdout).text();
+  const gerberExit = await gerberProc.exited;
+  if (gerberExit !== 0) {
+    const stderr = await new Response(gerberProc.stderr).text();
+    throw new Error(`Gerber export failed: ${stderr.trim()}`);
+  }
+
+  // Export drill files
+  const drillArgs = [
+    "kicad-cli", "pcb", "export", "drill",
+    pcbPath,
+    "-o", outDir + "/",
+    "--format", "excellon",
+    "--excellon-units", "mm",
+    "--excellon-zeros-format", "decimal",
+    "--excellon-oval-format", "alternate",
+    "--excellon-separate-th",
+  ];
+  if (useDrillOrigin) drillArgs.push("--drill-origin", "plot");
+
+  const drillProc = Bun.spawn(drillArgs, { stdout: "pipe", stderr: "pipe" });
+  await new Response(drillProc.stdout).text();
+  const drillExit = await drillProc.exited;
+  if (drillExit !== 0) {
+    const stderr = await new Response(drillProc.stderr).text();
+    throw new Error(`Drill export failed: ${stderr.trim()}`);
+  }
+
+  // List generated fabrication files (gerbers + drill), excluding the job file
+  const files = await readdir(outDir);
+  return files.filter((f) => !f.endsWith(".gbrjob") && !f.startsWith("."));
+}
+
+async function createZip(
+  sourceDir: string,
+  files: string[],
+  zipPath: string,
+): Promise<void> {
+  // Use system zip command
+  const proc = Bun.spawn(
+    ["zip", "-j", zipPath, ...files.map((f) => join(sourceDir, f))],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  await new Response(proc.stdout).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    const stderr = await new Response(proc.stderr).text();
+    throw new Error(`zip failed: ${stderr.trim()}`);
+  }
+}
+
 // ── Main export ──
 
 export async function productionExport(opts: ExportOptions = {}): Promise<ExportResult> {
@@ -256,12 +350,24 @@ export async function productionExport(opts: ExportOptions = {}): Promise<Export
   const bomPath = join(outDir, `BOM-${projectName}.csv`);
   await writeFile(bomPath, bomLines.join("\n") + "\n", "utf-8");
 
+  // Generate gerbers + drill files
+  const gerberDir = join(outDir, "gerbers");
+  await mkdir(gerberDir, { recursive: true });
+  const gerberFiles = await exportGerbers(pcbPath, gerberDir, opts.useDrillOrigin ?? false);
+
+  // Create submission ZIP (gerbers + BOM + CPL)
+  const zipPath = join(outDir, `${projectName}-jlcpcb.zip`);
+  await createZip(gerberDir, gerberFiles, zipPath);
+
   return {
     ok: true,
     bomCsvPath: bomPath,
     cplCsvPath: cplPath,
+    gerberDir,
+    zipPath,
     bomEntries: bomRows.length,
     cplEntries: positions.length,
+    gerberFiles: gerberFiles.length,
     correctionsApplied,
   };
 }
