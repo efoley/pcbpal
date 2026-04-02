@@ -50,6 +50,19 @@ pcbpal bom add --role "Board-to-board connector" --category connector --mpn "DF4
 pcbpal bom remove <id-or-prefix>
 pcbpal bom link <id-or-prefix> C1,C2,C3   # associate KiCad reference designators
 
+# Sync with schematic
+pcbpal bom sync                      # auto-populate BOM from KiCad schematic
+pcbpal bom sync --dry-run            # show what would change without writing
+pcbpal bom sync --online             # also fetch part details from LCSC API
+```
+
+`bom sync` reads all KiCad schematics, groups components by value + footprint,
+and creates BOM entries for new components. If a `jlcpcb/project.db` exists
+(from the JLCPCB KiCad plugin), it auto-imports LCSC part numbers. It also
+updates refs on existing entries and flags orphaned entries whose refs no longer
+appear in the schematic.
+
+```bash
 # Verify BOM
 pcbpal bom check                     # check stock, packages, refs against LCSC + schematic
 pcbpal bom check --offline           # local-only checks (no API calls)
@@ -229,7 +242,7 @@ When selecting components:
 4. Record why a part was chosen using `--selection-notes`
 5. Once finalized, update status to `selected`
 6. Use `pcbpal lib fetch` to get the KiCad symbol/footprint
-7. Link to schematic refs with `pcbpal bom link`
+7. Run `pcbpal bom sync` to auto-link refs and import parts from schematic
 8. Run `pcbpal bom check` to verify stock, footprint matching, and consistency
 
 When reviewing the BOM, run `pcbpal bom check` — it will:

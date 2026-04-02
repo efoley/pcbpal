@@ -13,9 +13,12 @@ export async function findKicadProjects(dir: string): Promise<string[]> {
  * A component placement extracted from a KiCad schematic.
  */
 export interface KicadComponent {
-  ref: string;         // e.g. "R5", "U3", "C10"
-  footprint: string;   // e.g. "Resistor_SMD:R_0603_1608Metric"
-  value: string;       // e.g. "10k", "100nF"
+  ref: string;           // e.g. "R5", "U3", "C10"
+  footprint: string;     // e.g. "Resistor_SMD:R_0603_1608Metric"
+  value: string;         // e.g. "10k", "100nF"
+  libId: string;         // e.g. "Device:C", "Amplifier_Operational:LM324"
+  description: string;   // e.g. "Unpolarized capacitor"
+  datasheet: string;     // URL or "~"
 }
 
 /**
@@ -36,15 +39,21 @@ function extractComponentsFromSch(content: string): KicadComponent[] {
     const refs = [...block.matchAll(/\(property\s+"Reference"\s+"([^"]+)"/g)];
     const fps = [...block.matchAll(/\(property\s+"Footprint"\s+"([^"]*)"/g)];
     const vals = [...block.matchAll(/\(property\s+"Value"\s+"([^"]*)"/g)];
+    const descs = [...block.matchAll(/\(property\s+"Description"\s+"([^"]*)"/g)];
+    const dss = [...block.matchAll(/\(property\s+"Datasheet"\s+"([^"]*)"/g)];
+    const libIds = [...block.matchAll(/\(lib_id\s+"([^"]+)"/g)];
 
     // Instance overrides come after library defs, so take the last occurrence
     const ref = refs.length > 0 ? refs[refs.length - 1][1] : null;
     const fp = fps.length > 0 ? fps[fps.length - 1][1] : null;
     const val = vals.length > 0 ? vals[vals.length - 1][1] : null;
+    const desc = descs.length > 0 ? descs[descs.length - 1][1] : "";
+    const ds = dss.length > 0 ? dss[dss.length - 1][1] : "";
+    const libId = libIds.length > 0 ? libIds[0][1] : "";
 
     // Only include actual placed components (ref has a number, skip power symbols)
     if (ref && /\d/.test(ref) && !ref.startsWith("#") && fp) {
-      results.push({ ref, footprint: fp, value: val ?? "" });
+      results.push({ ref, footprint: fp, value: val ?? "", libId, description: desc, datasheet: ds });
     }
   }
 

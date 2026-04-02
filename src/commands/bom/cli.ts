@@ -15,6 +15,7 @@ import {
 } from "./core.js";
 import { type BomCheckResult, type BomIssue, bomCheck } from "./check.js";
 import { type FpCheckResult, footprintCheck } from "./footprint-check.js";
+import { type SyncResult, bomSync } from "./sync.js";
 
 function renderBomTable(result: BomShowResult): void {
   if (result.entries.length === 0) {
@@ -274,6 +275,87 @@ export function registerBomCommand(program: Command): void {
         }
       },
     );
+
+  bom
+    .command("sync")
+    .description("Sync BOM with KiCad schematic — add new components, update refs")
+    .option("--dry-run", "Show what would change without writing")
+    .option("--online", "Fetch part details from LCSC for new entries")
+    .action(async (opts: { dryRun?: boolean; online?: boolean }) => {
+      try {
+        let spinner: ReturnType<typeof clack.spinner> | null = null;
+        if (isInteractive()) {
+          spinner = clack.spinner();
+          spinner.start("Syncing BOM with schematic...");
+        }
+
+        const result = await bomSync(
+          { dryRun: opts.dryRun, online: opts.online },
+          spinner ? (msg) => spinner!.message(msg) : undefined,
+        );
+
+        if (spinner) spinner.stop("Done");
+        output(result, renderSyncResult);
+      } catch (e) {
+        fatal((e as Error).message);
+      }
+    });
+}
+
+function renderSyncResult(result: SyncResult): void {
+  if (isInteractive()) {
+    clack.log.info(
+      `Schematic: ${result.schematicComponents} components`,
+    );
+
+    if (result.added.length > 0) {
+      clack.log.success(`Added ${result.added.length} new BOM entries:`);
+      for (const a of result.added) {
+        const lcscStr = a.lcsc ? pc.dim(` (${a.lcsc})`) : "";
+        console.log(
+          `  ${pc.green("+")} ${pc.bold(a.role)} [${a.refs.join(", ")}]${lcscStr}`,
+        );
+      }
+    }
+
+    if (result.updated.length > 0) {
+      clack.log.info(`Updated ${result.updated.length} existing entries:`);
+      for (const u of result.updated) {
+        const parts = [];
+        if (u.refsAdded.length > 0) parts.push(pc.green(`+${u.refsAdded.join(",")}`));
+        if (u.refsRemoved.length > 0) parts.push(pc.red(`-${u.refsRemoved.join(",")}`));
+        console.log(`  ${pc.yellow("~")} ${u.role} ${parts.join(" ")}`);
+      }
+    }
+
+    if (result.orphaned.length > 0) {
+      clack.log.warn(`${result.orphaned.length} entries have refs not in schematic:`);
+      for (const o of result.orphaned) {
+        console.log(`  ${pc.red("?")} ${o.role} [${o.refs.join(", ")}]`);
+      }
+    }
+
+    if (result.added.length === 0 && result.updated.length === 0 && result.orphaned.length === 0) {
+      clack.log.success("BOM is already in sync with schematic");
+    }
+  } else {
+    console.log(`${result.schematicComponents} schematic components`);
+    for (const a of result.added) {
+      console.log(`+ ${a.role} [${a.refs.join(", ")}]${a.lcsc ? ` (${a.lcsc})` : ""}`);
+    }
+    for (const u of result.updated) {
+      const parts = [];
+      if (u.refsAdded.length > 0) parts.push(`+${u.refsAdded.join(",")}`);
+      if (u.refsRemoved.length > 0) parts.push(`-${u.refsRemoved.join(",")}`);
+      console.log(`~ ${u.role} ${parts.join(" ")}`);
+    }
+    for (const o of result.orphaned) {
+      console.log(`? ${o.role} [${o.refs.join(", ")}]`);
+    }
+    console.log(
+      `\n${result.added.length} added, ${result.updated.length} updated, ${result.orphaned.length} orphaned, ${result.unchanged} unchanged`,
+    );
+  }
 }
 
 function renderFpCheckResult(result: FpCheckResult): void {
