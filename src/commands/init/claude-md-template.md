@@ -203,6 +203,27 @@ Use `pcbpal bom footprint-check` to detect rotation differences between
 KiCad and LCSC footprints — the "unclear" results are often pure rotation
 offsets that should become placement corrections.
 
+### Design review context
+
+```bash
+pcbpal review schematic              # export all schematic sheets as SVGs + context
+pcbpal review schematic --sheet 2    # specific sheet only
+pcbpal review pcb                    # export PCB layout SVG + context
+pcbpal review drc                    # run DRC, export violations as JSON + PCB SVG
+pcbpal review bom                    # export BOM summary + schematic SVGs
+pcbpal review bom --from-jlcpcb     # use JLCPCB plugin DB for BOM data
+```
+
+`review` assembles a context package in `.pcbpal/review/` for design review
+by Claude Code or other tools. It does not call an LLM itself — it prepares
+the data. The output includes:
+- SVG images (schematic sheets, PCB layout)
+- `context.json` with structured data: component list, BOM summary,
+  production config, DRC violations (for `drc` target)
+- Additional context files can be included with `--context file1,file2`
+
+With `--json`, the full context data is emitted to stdout for programmatic use.
+
 ### Health check
 
 ```bash
