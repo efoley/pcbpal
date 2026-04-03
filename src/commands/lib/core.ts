@@ -103,9 +103,31 @@ async function addToLibTable(
   return added;
 }
 
+const PCBPAL_LIB_NAME = "pcbpal";
+
 /**
- * Scan .pcbpal/lib/ for fetched libraries and add them to the project's
- * KiCad sym-lib-table and fp-lib-table.
+ * Remove library table entries whose names are in the given set
+ * (old per-component pcbpal entries like "C173752").
+ */
+async function removePcbpalEntries(
+  tablePath: string,
+  namesToRemove: Set<string>,
+): Promise<void> {
+  if (!(await exists(tablePath))) return;
+  const content = await readFile(tablePath, "utf-8");
+  const lines = content.split("\n");
+  const filtered = lines.filter((line) => {
+    const nameMatch = line.match(/\(lib\s+\(name\s+"([^"]+)"\)/);
+    if (!nameMatch) return true;
+    return !namesToRemove.has(nameMatch[1]);
+  });
+  await writeFile(tablePath, filtered.join("\n"), "utf-8");
+}
+
+/**
+ * Merge all individual .kicad_sym files into a single pcbpal.kicad_sym,
+ * and consolidate all .pretty footprints into a single pcbpal.pretty dir.
+ * This gives a clean "pcbpal" category in KiCad's symbol/footprint chooser.
  */
 export async function libInstall(): Promise<LibInstallResult> {
   const root = await findProjectRoot();
@@ -117,33 +139,101 @@ export async function libInstall(): Promise<LibInstallResult> {
   }
 
   const files = await readdir(libDir);
-
-  // Find .kicad_sym files and .pretty directories
   const symFiles = files.filter((f) => f.endsWith(".kicad_sym"));
   const prettyDirs = files.filter((f) => f.endsWith(".pretty"));
 
-  // Build entries with paths relative to the project root
-  const symEntries = symFiles.map((f) => ({
-    name: f.replace(".kicad_sym", ""),
-    uri: relative(root, join(libDir, f)),
-  }));
-  const fpEntries = prettyDirs.map((f) => ({
-    name: f.replace(".pretty", ""),
-    uri: relative(root, join(libDir, f)),
-  }));
+  // ── Merge symbols into pcbpal.kicad_sym ──
+  const symbolsAdded: string[] = [];
+  const symbolBlocks: string[] = [];
 
+  for (const symFile of symFiles) {
+    const content = await readFile(join(libDir, symFile), "utf-8");
+    const lcsc = symFile.replace(".kicad_sym", "");
+
+    // Extract symbol blocks from the file (everything between the outer parens)
+    // Each file has: (kicad_symbol_lib (version ...) (generator ...) (symbol "Name" ...))
+    const symbolRegex = /(\(symbol\s+"[^"]+?"[\s\S]*?\n\s{2}\))/g;
+    let match: RegExpExecArray | null;
+    while ((match = symbolRegex.exec(content)) !== null) {
+      let block = match[1];
+      // Rewrite Footprint property: "C173752:FP_NAME" → "pcbpal:FP_NAME"
+      block = block.replace(
+        /(\(property\s+"Footprint"\s+")([^":]+):([^"]+)(")/g,
+        `$1${PCBPAL_LIB_NAME}:$3$4`,
+      );
+      symbolBlocks.push(block);
+      symbolsAdded.push(lcsc);
+    }
+  }
+
+  if (symbolBlocks.length > 0) {
+    // Write a merged file, then upgrade it to KiCad 9 format via kicad-cli
+    const mergedPath = join(libDir, `${PCBPAL_LIB_NAME}.kicad_sym`);
+    const merged = [
+      "(kicad_symbol_lib",
+      "  (version 20211014)",
+      '  (generator "pcbpal")',
+      ...symbolBlocks.map((b) => "  " + b.replace(/\n/g, "\n  ")),
+      ")",
+      "",
+    ].join("\n");
+    await writeFile(mergedPath, merged, "utf-8");
+
+    // Upgrade to current KiCad format (adds exclude_from_sim, fixes indentation, etc.)
+    const tmpPath = mergedPath + ".tmp";
+    const upgradeProc = Bun.spawn(
+      ["kicad-cli", "sym", "upgrade", mergedPath, "--force", "-o", tmpPath],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    await new Response(upgradeProc.stdout).text();
+    const exitCode = await upgradeProc.exited;
+    if (exitCode === 0 && (await exists(tmpPath))) {
+      const { rename } = await import("node:fs/promises");
+      await rename(tmpPath, mergedPath);
+    }
+  }
+
+  // ── Consolidate footprints into pcbpal.pretty ──
+  const { copyFile } = await import("node:fs/promises");
+  const mergedPrettyDir = join(libDir, `${PCBPAL_LIB_NAME}.pretty`);
+  await mkdir(mergedPrettyDir, { recursive: true });
+
+  const footprintsAdded: string[] = [];
+  for (const prettyDir of prettyDirs) {
+    if (prettyDir === `${PCBPAL_LIB_NAME}.pretty`) continue;
+    const lcsc = prettyDir.replace(".pretty", "");
+    const srcDir = join(libDir, prettyDir);
+    const modFiles = (await readdir(srcDir)).filter((f) => f.endsWith(".kicad_mod"));
+    for (const modFile of modFiles) {
+      await copyFile(join(srcDir, modFile), join(mergedPrettyDir, modFile));
+      footprintsAdded.push(`${lcsc}/${modFile}`);
+    }
+  }
+
+  // ── Register in library tables ──
+  // Remove old per-component pcbpal entries, keep the single merged one
   const symTablePath = join(root, "sym-lib-table");
   const fpTablePath = join(root, "fp-lib-table");
 
-  const symbolsAdded = await addToLibTable(symTablePath, "sym_lib_table", symEntries);
-  const footprintsAdded = await addToLibTable(fpTablePath, "fp_lib_table", fpEntries);
+  const lcscNames = new Set([
+    ...symFiles.map((f) => f.replace(".kicad_sym", "")),
+    ...prettyDirs.filter((d) => d !== `${PCBPAL_LIB_NAME}.pretty`).map((d) => d.replace(".pretty", "")),
+  ]);
+  await removePcbpalEntries(symTablePath, lcscNames);
+  await removePcbpalEntries(fpTablePath, lcscNames);
+
+  const symUri = `\${KIPRJMOD}/${relative(root, join(libDir, `${PCBPAL_LIB_NAME}.kicad_sym`))}`;
+  const fpUri = `\${KIPRJMOD}/${relative(root, join(libDir, `${PCBPAL_LIB_NAME}.pretty`))}`;
+
+  await addToLibTable(symTablePath, "sym_lib_table", [{ name: PCBPAL_LIB_NAME, uri: symUri }]);
+  await addToLibTable(fpTablePath, "fp_lib_table", [{ name: PCBPAL_LIB_NAME, uri: fpUri }]);
 
   return {
     ok: true,
     symbolsAdded,
     footprintsAdded,
-    symbolsExisting: symEntries.length - symbolsAdded.length,
-    footprintsExisting: fpEntries.length - footprintsAdded.length,
+    symbolsExisting: 0,
+    footprintsExisting: 0,
   };
 }
 
