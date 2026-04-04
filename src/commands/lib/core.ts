@@ -139,8 +139,9 @@ export async function libInstall(): Promise<LibInstallResult> {
   }
 
   const files = await readdir(libDir);
-  const symFiles = files.filter((f) => f.endsWith(".kicad_sym"));
-  const prettyDirs = files.filter((f) => f.endsWith(".pretty"));
+  // Exclude the merged output files from the input list
+  const symFiles = files.filter((f) => f.endsWith(".kicad_sym") && f !== `${PCBPAL_LIB_NAME}.kicad_sym`);
+  const prettyDirs = files.filter((f) => f.endsWith(".pretty") && f !== `${PCBPAL_LIB_NAME}.pretty`);
 
   // ── Merge symbols into pcbpal.kicad_sym ──
   const symbolsAdded: string[] = [];
