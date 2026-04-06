@@ -3,7 +3,16 @@ import type { Command } from "commander";
 import pc from "picocolors";
 import { isInteractive } from "../../cli/context.js";
 import { fatal, output, runWithSpinner } from "../../cli/output.js";
-import { type LibFetchResult, type LibInstallResult, libFetch, libInstall } from "./core.js";
+import {
+  type LibAssignFootprintResult,
+  type LibFetchResult,
+  type LibInstallResult,
+  type LibListResult,
+  libAssignFootprint,
+  libFetch,
+  libInstall,
+  libList,
+} from "./core.js";
 
 function renderFetchResult(result: LibFetchResult): void {
   if (isInteractive()) {
@@ -51,6 +60,87 @@ export function registerLibCommand(program: Command): void {
         fatal((e as Error).message);
       }
     });
+
+  lib
+    .command("list")
+    .description("List symbols in the pcbpal library with their footprints")
+    .action(async () => {
+      try {
+        const result = await libList();
+        output(result, renderListResult);
+      } catch (e) {
+        fatal((e as Error).message);
+      }
+    });
+
+  lib
+    .command("assign-footprint <refs> <footprint>")
+    .description("Set the footprint on placed components in the KiCad schematic")
+    .action(async (refs: string, footprint: string) => {
+      try {
+        const refList = refs.split(",").map((r) => r.trim());
+        const result = await libAssignFootprint(refList, footprint);
+        output(result, renderAssignFootprintResult);
+      } catch (e) {
+        fatal((e as Error).message);
+      }
+    });
+}
+
+function renderAssignFootprintResult(result: LibAssignFootprintResult): void {
+  if (isInteractive()) {
+    clack.log.success(
+      `Set ${pc.cyan(result.footprint)} on ${result.modified.length} component(s): ${pc.bold(result.modified.join(", "))}`,
+    );
+    if (result.notFound.length > 0) {
+      clack.log.warn(`Not found in schematic: ${result.notFound.join(", ")}`);
+    }
+  } else {
+    for (const ref of result.modified) {
+      console.log(`${ref} -> ${result.footprint}`);
+    }
+    if (result.notFound.length > 0) {
+      console.log(`not found: ${result.notFound.join(", ")}`);
+    }
+  }
+}
+
+function renderListResult(result: LibListResult): void {
+  if (result.symbols.length === 0) {
+    if (isInteractive()) {
+      clack.log.info("No symbols in pcbpal library. Run `pcbpal lib fetch` then `pcbpal lib install`.");
+    } else {
+      console.log("(empty)");
+    }
+    return;
+  }
+
+  const header = ["Symbol", "Footprint", "LCSC", "Pins"];
+  const rows = result.symbols.map((s) => [
+    s.name,
+    s.footprint || pc.dim("(none)"),
+    s.lcscPart || "—",
+    String(s.pinCount),
+  ]);
+
+  const widths = header.map((h, i) =>
+    Math.max(h.length, ...rows.map((r) => r[i].replace(/\x1b\[[^m]*m/g, "").length)),
+  );
+  const line = (cells: string[]) =>
+    cells.map((c, i) => {
+      const visible = c.replace(/\x1b\[[^m]*m/g, "").length;
+      return c + " ".repeat(Math.max(0, widths[i] - visible));
+    }).join("  ");
+
+  if (isInteractive()) {
+    console.log(pc.bold(line(header)));
+    console.log(widths.map((w) => "─".repeat(w)).join("  "));
+  } else {
+    console.log(line(header));
+    console.log(widths.map((w) => "-".repeat(w)).join("  "));
+  }
+  for (const row of rows) console.log(line(row));
+  console.log(`\n${result.symbols.length} symbols, ${result.footprintCount} footprints`);
 }
 
 function renderInstallResult(result: LibInstallResult): void {

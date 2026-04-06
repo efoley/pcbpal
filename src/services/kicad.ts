@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
@@ -85,6 +85,70 @@ export async function readSchematicComponents(
   }
 
   return [...byRef.values()];
+}
+
+/**
+ * Set the footprint property on component instances in the schematic files.
+ * Finds each ref in the .kicad_sch files and rewrites its Footprint property.
+ * Returns the refs that were actually modified.
+ */
+export async function assignFootprints(
+  projectDir: string,
+  refs: string[],
+  footprint: string,
+): Promise<{ modified: string[]; notFound: string[] }> {
+  const entries = await readdir(projectDir);
+  const schFiles = entries.filter((e) => e.endsWith(".kicad_sch"));
+
+  const refsToFind = new Set(refs);
+  const modified: string[] = [];
+
+  for (const file of schFiles) {
+    const filePath = join(projectDir, file);
+    let content = await readFile(filePath, "utf-8");
+
+    // Find placed symbol instances and check their reference
+    const symbolRegex = /\(symbol\s[\s\S]*?\n\t\)/g;
+    let match: RegExpExecArray | null;
+
+    // Collect replacements (work backwards to preserve offsets)
+    const replacements: { start: number; end: number; newBlock: string }[] = [];
+
+    while ((match = symbolRegex.exec(content)) !== null) {
+      const block = match[0];
+      const blockStart = match.index;
+
+      // Get the instance reference (last occurrence, which is the override)
+      const refMatches = [...block.matchAll(/\(property\s+"Reference"\s+"([^"]+)"/g)];
+      const ref = refMatches.length > 0 ? refMatches[refMatches.length - 1][1] : null;
+      if (!ref || !refsToFind.has(ref)) continue;
+
+      // Find and replace the Footprint property value in this block
+      const fpRegex = /(\(property\s+"Footprint"\s+)"([^"]*)"/g;
+      const fpMatches = [...block.matchAll(fpRegex)];
+      if (fpMatches.length === 0) continue;
+
+      // Replace the last Footprint match (instance override)
+      const lastFp = fpMatches[fpMatches.length - 1];
+      const fpStart = blockStart + lastFp.index!;
+      const fpEnd = fpStart + lastFp[0].length;
+      const newFp = `${lastFp[1]}"${footprint}"`;
+
+      replacements.push({ start: fpStart, end: fpEnd, newBlock: newFp });
+      modified.push(ref);
+      refsToFind.delete(ref);
+    }
+
+    // Apply replacements in reverse order to preserve offsets
+    if (replacements.length > 0) {
+      for (const r of replacements.reverse()) {
+        content = content.slice(0, r.start) + r.newBlock + content.slice(r.end);
+      }
+      await writeFile(filePath, content, "utf-8");
+    }
+  }
+
+  return { modified, notFound: [...refsToFind] };
 }
 
 /**

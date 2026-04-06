@@ -108,14 +108,27 @@ pcbpal lib fetch C1525               # downloads symbol, footprint, and 3D model
 pcbpal lib fetch C1525 --symbol      # symbol only (.kicad_sym)
 pcbpal lib fetch C1525 --footprint   # footprint only (.pretty/)
 pcbpal lib fetch C1525 --3d          # 3D model only (.wrl)
-pcbpal lib install                   # add all fetched libraries to KiCad's library tables
+pcbpal lib install                   # merge and register all fetched libraries in KiCad
+pcbpal lib list                      # show all symbols with their footprints
+pcbpal lib assign-footprint R1,R2,R3 "Resistor_SMD:R_0402_1005Metric"  # set in schematic
 ```
 
 `lib fetch` downloads to `.pcbpal/lib/<LCSC>.kicad_sym`, `.pcbpal/lib/<LCSC>.pretty/`,
-and `.pcbpal/lib/<LCSC>.wrl`. Run `lib install` afterwards to register them in
-KiCad's project-level `sym-lib-table` and `fp-lib-table` so they're available
-in the schematic and PCB editors. `lib install` is idempotent — it skips
-libraries already registered.
+and `.pcbpal/lib/<LCSC>.wrl`. Run `lib install` afterwards — it merges all
+individual symbol files into a single `pcbpal.kicad_sym` library (so they
+appear under one "pcbpal" category in KiCad's chooser), consolidates footprints
+into `pcbpal.pretty`, upgrades to KiCad 9 format, and registers them in the
+project's `sym-lib-table` and `fp-lib-table`.
+
+`lib list` shows all symbols with their current footprint assignment, LCSC
+part number, and pin count. Use `lib assign-footprint` to set footprints on
+already-placed components in the KiCad schematic (like KiCad's "Assign
+Footprints" dialog, but from the CLI):
+
+```bash
+pcbpal lib assign-footprint C1,C2,C3 "Capacitor_SMD:C_0402_1005Metric"
+pcbpal lib assign-footprint R1,R2 "Resistor_SMD:R_0402_1005Metric"
+```
 
 Requires `easyeda2kicad` (`pipx install easyeda2kicad`). Run `pcbpal doctor`
 to check that it's installed.

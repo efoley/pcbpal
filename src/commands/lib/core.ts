@@ -1,5 +1,6 @@
 import { exists, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { assignFootprints } from "../../services/kicad.js";
 import { findProjectRoot } from "../../services/project.js";
 
 export interface LibFetchOptions {
@@ -235,6 +236,105 @@ export async function libInstall(): Promise<LibInstallResult> {
     footprintsAdded,
     symbolsExisting: 0,
     footprintsExisting: 0,
+  };
+}
+
+// ── lib list ──
+
+export interface LibSymbolInfo {
+  name: string;
+  footprint: string;
+  lcscPart: string;
+  pinCount: number;
+}
+
+export interface LibListResult {
+  ok: true;
+  symbols: LibSymbolInfo[];
+  footprintCount: number;
+}
+
+/**
+ * Parse the merged pcbpal.kicad_sym and list all symbols with their footprints.
+ */
+export async function libList(): Promise<LibListResult> {
+  const root = await findProjectRoot();
+  if (!root) throw new Error("Not in a pcbpal project (no pcbpal.toml found)");
+
+  const mergedPath = join(root, ".pcbpal", "lib", `${PCBPAL_LIB_NAME}.kicad_sym`);
+  if (!(await exists(mergedPath))) {
+    return { ok: true, symbols: [], footprintCount: 0 };
+  }
+
+  const content = await readFile(mergedPath, "utf-8");
+  const symbols: LibSymbolInfo[] = [];
+
+  // Match top-level symbols (one tab indent, not sub-symbols like Name_0_1)
+  const symRegex = /\t\(symbol "([^"]+)"[\s\S]*?(?=\n\t\(symbol "|\n\)$)/g;
+  let match: RegExpExecArray | null;
+  while ((match = symRegex.exec(content)) !== null) {
+    const name = match[1];
+    // Skip sub-symbols (Name_0_1, Name_1_1, etc.)
+    if (/_\d+_\d+$/.test(name)) continue;
+
+    const block = match[0];
+    const fpMatch = block.match(/\(property "Footprint" "([^"]*)"/);
+    const lcscMatch = block.match(/\(property "LCSC Part" "([^"]*)"/);
+    const pinCount = (block.match(/\(pin /g) ?? []).length;
+
+    symbols.push({
+      name,
+      footprint: fpMatch?.[1] ?? "",
+      lcscPart: lcscMatch?.[1] ?? "",
+      pinCount,
+    });
+  }
+
+  // Count footprints in pcbpal.pretty
+  const prettyDir = join(root, ".pcbpal", "lib", `${PCBPAL_LIB_NAME}.pretty`);
+  let footprintCount = 0;
+  if (await exists(prettyDir)) {
+    const files = await readdir(prettyDir);
+    footprintCount = files.filter((f) => f.endsWith(".kicad_mod")).length;
+  }
+
+  return { ok: true, symbols, footprintCount };
+}
+
+// ── lib assign-footprint ──
+
+export interface LibAssignFootprintResult {
+  ok: true;
+  footprint: string;
+  modified: string[];
+  notFound: string[];
+}
+
+/**
+ * Set the footprint on component instances in the KiCad schematic files.
+ */
+export async function libAssignFootprint(
+  refs: string[],
+  footprint: string,
+): Promise<LibAssignFootprintResult> {
+  const root = await findProjectRoot();
+  if (!root) throw new Error("Not in a pcbpal project (no pcbpal.toml found)");
+
+  const result = await assignFootprints(root, refs, footprint);
+
+  if (result.modified.length === 0) {
+    throw new Error(
+      result.notFound.length > 0
+        ? `Refs not found in schematic: ${result.notFound.join(", ")}`
+        : "No components were modified",
+    );
+  }
+
+  return {
+    ok: true,
+    footprint,
+    modified: result.modified,
+    notFound: result.notFound,
   };
 }
 
