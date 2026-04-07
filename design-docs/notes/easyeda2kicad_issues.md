@@ -49,6 +49,44 @@ but the library-level naming gives no hint.
 pcbpal works around this by merging all symbols into a single `pcbpal.kicad_sym`
 library, so the chooser shows `pcbpal > IP5306-I2C` instead of `C488349 > IP5306-I2C`.
 
+## All pins are "unspecified" type — causes ERC warnings
+
+easyeda2kicad sets every pin to `(pin unspecified line ...)`. The EasyEDA
+data doesn't include electrical type information. This causes KiCad ERC
+warnings like "Pins of type Unspecified and Output are connected" on every
+connection.
+
+KiCad pin types and their meanings:
+
+| Type | Use for |
+|------|---------|
+| `input` | IC inputs (EN, CS, RST, RX, MOSI, address pins) |
+| `output` | IC outputs (TX, DOUT, MISO, clock out) |
+| `bidirectional` | I/O pins (GPIO, SDA, SWD data) |
+| `tri_state` | Tri-state bus outputs |
+| `passive` | Resistors, capacitors, inductors, connector pins |
+| `power_in` | VCC/GND pins on ICs (power consumers) |
+| `power_out` | Regulator output, power source pins |
+| `open_collector` | Open-drain/open-collector outputs (e.g. I2C) |
+| `no_connect` | Pins that should not be connected |
+| `free` | Pins that can connect to anything without ERC errors |
+
+A few cases are safe to auto-infer from pin names:
+- `VCC`, `VDD`, `VBUS`, `VIN`, `GND`, `VSS`, `PGND` → `power_in`
+- Numbered-only pins on 2-pin passives (resistors, caps) → `passive`
+
+Most other cases are ambiguous without knowing the IC's function — e.g.
+a pin named "OUT" could be `output` on a buffer or `power_out` on a
+regulator. Auto-tagging these risks creating wrong ERC results that are
+worse than the "unspecified" warnings.
+
+**Possible approaches:**
+1. Auto-fix only the safe cases (power pins, passives) in `lib install`
+2. Let the user manually fix pin types in KiCad's symbol editor after
+   placing (edits are saved to the schematic, not the library)
+3. Use LCSC category metadata (e.g. "Voltage Regulators") to make
+   smarter inferences per component type
+
 ## Footprint property references are per-component
 
 Each symbol's Footprint property references its own LCSC-named library:
