@@ -237,6 +237,27 @@ the data. The output includes:
 
 With `--json`, the full context data is emitted to stdout for programmatic use.
 
+### Firmware reference
+
+```bash
+pcbpal firmware-datasheet                    # auto-detect MCU, write firmware_CLAUDE.md
+pcbpal firmware-datasheet --mcu U2           # specify MCU ref if multiple
+pcbpal firmware-datasheet --include-tps      # include test point net mappings
+pcbpal firmware-datasheet --from-jlcpcb      # use JLCPCB plugin DB for BOM roles
+pcbpal firmware-datasheet -o board_ref.md    # custom output file
+```
+
+Generates a firmware-oriented board reference from the KiCad netlist. Includes:
+- MCU pin map with net names, connected components, and purpose annotations
+- Free (unconnected) GPIOs
+- Power rails with sources
+- Debug interface pinouts (SWD/JTAG/Tag-Connect)
+- Subsystem grouping from hierarchical schematic sheets
+
+The pin map is extracted from `kicad-cli sch export netlist` — no LLM
+guessing. Purpose annotations come from BOM `role` fields and component
+descriptions.
+
 ### Health check
 
 ```bash
