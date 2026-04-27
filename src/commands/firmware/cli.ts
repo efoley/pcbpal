@@ -14,7 +14,7 @@ function renderFirmwareResult(result: FirmwareDatasheetResult): void {
       `Firmware reference for ${pc.bold(result.mcu.value)} (${result.mcu.ref})`,
     );
     clack.log.info(
-      `${result.pins.length} MCU pins mapped, ${result.freeGpios.length} free GPIOs`,
+      `${result.pins.length} MCU pins mapped`,
     );
     if (result.powerRails.length > 0) {
       clack.log.info(`${result.powerRails.length} power rails`);

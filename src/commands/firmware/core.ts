@@ -1,10 +1,8 @@
 import { join } from "node:path";
 import type { BomDatabase } from "../../schemas/bom.js";
 import {
-  type Netlist,
   type NetlistComponent,
   type NetlistNet,
-  type NetlistNode,
   exportNetlist,
 } from "../../services/netlist.js";
 import { findProjectRoot, readBom, readConfig } from "../../services/project.js";
@@ -48,7 +46,6 @@ export interface FirmwareDatasheetResult {
   projectName: string;
   mcu: { ref: string; value: string; description: string; footprint: string };
   pins: McuPin[];
-  freeGpios: McuPin[];
   powerRails: PowerRail[];
   debugInterfaces: DebugInterface[];
   sheets: { name: string; nets: string[] }[];
@@ -193,9 +190,6 @@ export async function firmwareDatasheet(
     mcuComp = detected;
   }
 
-  // Build net lookup: net name → NetlistNet
-  const netByName = new Map(netlist.nets.map((n) => [n.name, n]));
-
   // Build MCU pin table
   const mcuNets = netlist.nets.filter((n) =>
     n.nodes.some((nd) => nd.ref === mcuComp.ref),
@@ -230,8 +224,6 @@ export async function firmwareDatasheet(
     if (a.pinType !== "power_in" && b.pinType === "power_in") return 1;
     return parseInt(a.pin) - parseInt(b.pin);
   });
-
-  const freeGpios = pins.filter((p) => p.isUnconnected);
 
   // Power rails
   const powerNets = netlist.nets.filter((n) => {
@@ -307,7 +299,6 @@ export async function firmwareDatasheet(
     projectName: config.project.name,
     mcu: mcuComp,
     pins,
-    freeGpios,
     powerRails,
     debugInterfaces,
     sheets,
@@ -324,7 +315,6 @@ export async function firmwareDatasheet(
       footprint: mcuComp.footprint,
     },
     pins,
-    freeGpios,
     powerRails,
     debugInterfaces,
     sheets,
@@ -338,14 +328,13 @@ function generateMarkdown(data: {
   projectName: string;
   mcu: NetlistComponent;
   pins: McuPin[];
-  freeGpios: McuPin[];
   powerRails: PowerRail[];
   debugInterfaces: DebugInterface[];
   sheets: { name: string; nets: string[] }[];
   includeTestPoints?: boolean;
 }): string {
   const lines: string[] = [];
-  const { mcu, pins, freeGpios, powerRails, debugInterfaces, sheets } = data;
+  const { mcu, pins, powerRails, debugInterfaces, sheets } = data;
 
   lines.push(`# ${data.projectName} — Firmware Reference`);
   lines.push("");
@@ -370,19 +359,6 @@ function generateMarkdown(data: {
   }
   lines.push("");
 
-  // Free GPIOs
-  if (freeGpios.length > 0) {
-    lines.push("## Free GPIOs");
-    lines.push("");
-    lines.push(
-      "These MCU pins are not connected in the schematic and available for firmware use:",
-    );
-    lines.push("");
-    lines.push(
-      freeGpios.map((p) => `- **${p.function}** (pin ${p.pin})`).join("\n"),
-    );
-    lines.push("");
-  }
 
   // Power rails
   if (powerRails.length > 0) {
