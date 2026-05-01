@@ -13,15 +13,16 @@ function renderFirmwareResult(result: FirmwareDatasheetResult): void {
     clack.log.success(
       `Firmware reference for ${pc.bold(result.mcu.value)} (${result.mcu.ref})`,
     );
+    const signalCount = result.pins.filter((p) => !p.isUnconnected).length;
     clack.log.info(
-      `${result.pins.length} MCU pins mapped`,
+      `${signalCount} signal pins, ${result.freeGpios.length} unconnected`,
     );
     if (result.powerRails.length > 0) {
       clack.log.info(`${result.powerRails.length} power rails`);
     }
     if (result.debugInterfaces.length > 0) {
       clack.log.info(
-        `Debug: ${result.debugInterfaces.map((d) => d.connector).join(", ")}`,
+        `Debug: ${result.debugInterfaces.map((d) => d.ref).join(", ")}`,
       );
     }
   } else {

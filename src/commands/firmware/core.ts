@@ -31,12 +31,12 @@ export interface McuPin {
 
 export interface PowerRail {
   net: string;
-  components: string[]; // refs connected to this rail
-  description: string;
+  source: string; // regulator/connector that supplies this rail
+  loads: string[]; // ICs fed by this rail (not passives)
 }
 
-export interface DebugInterface {
-  connector: string; // ref
+export interface ConnectorInfo {
+  ref: string;
   description: string;
   pins: { pin: string; net: string; function: string }[];
 }
@@ -46,8 +46,10 @@ export interface FirmwareDatasheetResult {
   projectName: string;
   mcu: { ref: string; value: string; description: string; footprint: string };
   pins: McuPin[];
+  freeGpios: McuPin[];
   powerRails: PowerRail[];
-  debugInterfaces: DebugInterface[];
+  debugInterfaces: ConnectorInfo[];
+  connectors: ConnectorInfo[];
   sheets: { name: string; nets: string[] }[];
   markdown: string;
 }
@@ -68,14 +70,20 @@ function isMcu(comp: NetlistComponent): boolean {
 
 function detectMcu(components: NetlistComponent[]): NetlistComponent | null {
   const candidates = components.filter(isMcu);
-  // Prefer the one with the most net connections (likely the main MCU)
   return candidates[0] ?? null;
 }
 
+function isPassiveRef(ref: string): boolean {
+  return /^(R|C|L|FB)\d/.test(ref);
+}
+
+function isTestPointRef(ref: string): boolean {
+  return /^TP\d/.test(ref);
+}
+
 /**
- * Derive a concise purpose annotation for a net from the BOM roles
- * and component descriptions of connected components.
- * Skips passives (caps, resistors) to focus on the meaningful connections.
+ * Derive a concise purpose annotation for a net.
+ * Skips passives and test points to focus on meaningful ICs/connectors.
  */
 function derivePurpose(
   net: NetlistNet,
@@ -83,7 +91,7 @@ function derivePurpose(
   componentMap: Map<string, NetlistComponent>,
   bomRoleMap: Map<string, string>,
 ): string {
-  const passiveRefs = new Set<string>();
+  const passiveRefs: string[] = [];
   const meaningful: string[] = [];
 
   for (const node of net.nodes) {
@@ -91,11 +99,8 @@ function derivePurpose(
     const comp = componentMap.get(node.ref);
     if (!comp) continue;
 
-    // Skip passives and test points for the purpose annotation
-    const isPassive = /^(R|C|L|FB)\d/.test(node.ref);
-    const isTestPoint = /^TP\d/.test(node.ref);
-    if (isPassive) { passiveRefs.add(node.ref); continue; }
-    if (isTestPoint) continue;
+    if (isPassiveRef(node.ref)) { passiveRefs.push(node.ref); continue; }
+    if (isTestPointRef(node.ref)) continue;
 
     const role = bomRoleMap.get(node.ref);
     if (role) {
@@ -106,12 +111,9 @@ function derivePurpose(
     }
   }
 
-  const result = meaningful.join(", ");
-  if (passiveRefs.size > 0 && meaningful.length === 0) {
-    // Net only connects to passives — mention them briefly
-    return `${[...passiveRefs].join(", ")}`;
-  }
-  return result;
+  if (meaningful.length > 0) return meaningful.join(", ");
+  if (passiveRefs.length > 0) return passiveRefs.join(", ");
+  return "";
 }
 
 /**
@@ -130,6 +132,53 @@ function netSheet(
   return "/";
 }
 
+/**
+ * Identify the source of a power rail — look for regulators, converters,
+ * and connectors with power_out pins on this net.
+ */
+function identifyPowerSource(
+  net: NetlistNet,
+  componentMap: Map<string, NetlistComponent>,
+): string {
+  for (const node of net.nodes) {
+    // Pin explicitly marked as power output
+    if (node.pinType === "power_out") {
+      const comp = componentMap.get(node.ref);
+      if (comp) return `${node.ref} (${comp.value})`;
+    }
+  }
+
+  for (const node of net.nodes) {
+    const comp = componentMap.get(node.ref);
+    if (!comp) continue;
+    const text = `${comp.description} ${comp.libPart}`.toLowerCase();
+    // Regulator/converter output pins
+    if (text.includes("regulator") || text.includes("converter") || text.includes("boost") || text.includes("buck")) {
+      const fn = node.pinFunction?.toLowerCase() ?? "";
+      if (fn.includes("out") || fn.includes("vo") || fn.includes("sw")) {
+        return `${node.ref} (${comp.value})`;
+      }
+    }
+    // USB connector supplying VBUS
+    if (node.ref.startsWith("J") && net.name.toLowerCase().includes("vbus")) {
+      return `${node.ref} (${comp.value})`;
+    }
+  }
+
+  return "";
+}
+
+function isConnector(comp: NetlistComponent): boolean {
+  if (isTestPointRef(comp.ref)) return false;
+  const text = `${comp.value} ${comp.description} ${comp.libPart}`.toLowerCase();
+  return comp.ref.startsWith("J") || text.includes("connector") || text.includes("receptacle") || text.includes("header");
+}
+
+function isDebugConnector(comp: NetlistComponent): boolean {
+  const text = `${comp.value} ${comp.description}`.toLowerCase();
+  return text.includes("swd") || text.includes("jtag") || text.includes("tag-connect");
+}
+
 // ── Main ──
 
 export async function firmwareDatasheet(
@@ -145,10 +194,7 @@ export async function firmwareDatasheet(
 
   const schPath = join(root, config.project.kicad_project.replace(/\.kicad_pro$/, ".kicad_sch"));
 
-  // Export and parse netlist
   const netlist = await exportNetlist(schPath);
-
-  // Build lookup maps
   const componentMap = new Map(netlist.components.map((c) => [c.ref, c]));
 
   // Read BOM for role annotations
@@ -167,7 +213,7 @@ export async function firmwareDatasheet(
       }
     }
   } catch {
-    // BOM may not exist — proceed without role annotations
+    // BOM may not exist
   }
 
   // Detect MCU
@@ -218,17 +264,16 @@ export async function firmwareDatasheet(
     });
   }
 
-  // Sort: power pins first, then by pin number
-  pins.sort((a, b) => {
-    if (a.pinType === "power_in" && b.pinType !== "power_in") return -1;
-    if (a.pinType !== "power_in" && b.pinType === "power_in") return 1;
-    return parseInt(a.pin) - parseInt(b.pin);
-  });
+  // Sort by pin number
+  pins.sort((a, b) => parseInt(a.pin) - parseInt(b.pin));
+
+  const freeGpios = pins.filter((p) => p.isUnconnected);
 
   // Power rails
+  const powerNetNames = new Set<string>();
   const powerNets = netlist.nets.filter((n) => {
     const name = n.name.toLowerCase();
-    return (
+    const isPower =
       name.startsWith("+") ||
       name === "gnd" ||
       name.includes("vdd") ||
@@ -236,45 +281,51 @@ export async function firmwareDatasheet(
       name.includes("vbus") ||
       name.includes("3v3") ||
       name.includes("5v") ||
-      name.includes("vref")
-    );
+      name.includes("vref");
+    if (isPower) powerNetNames.add(n.name);
+    return isPower;
   });
 
-  const powerRails: PowerRail[] = powerNets.map((n) => ({
-    net: n.name,
-    components: n.nodes.map((nd) => nd.ref),
-    description:
-      n.nodes
-        .filter((nd) => {
-          const comp = componentMap.get(nd.ref);
-          return comp && (comp.libPart.includes("Regulator") || comp.description.toLowerCase().includes("regulator"));
-        })
-        .map((nd) => {
-          const comp = componentMap.get(nd.ref)!;
-          return `${nd.ref} (${comp.value})`;
-        })
-        .join(", ") || "",
-  }));
+  const powerRails: PowerRail[] = powerNets.map((n) => {
+    const loads = n.nodes
+      .filter((nd) => {
+        const comp = componentMap.get(nd.ref);
+        return comp && !isPassiveRef(nd.ref) && !isTestPointRef(nd.ref);
+      })
+      .map((nd) => nd.ref);
+    // Deduplicate (same ref may appear multiple times for multi-pin power)
+    const uniqueLoads = [...new Set(loads)];
 
-  // Debug interfaces
-  const debugInterfaces: DebugInterface[] = [];
-  const debugComps = netlist.components.filter((c) => {
-    const text = `${c.value} ${c.description}`.toLowerCase();
-    return text.includes("swd") || text.includes("jtag") || text.includes("tag-connect");
+    return {
+      net: n.name,
+      source: identifyPowerSource(n, componentMap),
+      loads: uniqueLoads,
+    };
   });
 
-  for (const dbg of debugComps) {
-    const dbgNets = netlist.nets.filter((n) =>
-      n.nodes.some((nd) => nd.ref === dbg.ref),
+  // Connectors — debug and non-debug
+  const debugInterfaces: ConnectorInfo[] = [];
+  const connectors: ConnectorInfo[] = [];
+
+  const allConnectors = netlist.components.filter(isConnector);
+  for (const conn of allConnectors) {
+    const connNets = netlist.nets.filter((n) =>
+      n.nodes.some((nd) => nd.ref === conn.ref),
     );
-    debugInterfaces.push({
-      connector: dbg.ref,
-      description: `${dbg.value} — ${dbg.description}`,
-      pins: dbgNets.map((n) => {
-        const node = n.nodes.find((nd) => nd.ref === dbg.ref)!;
+    const info: ConnectorInfo = {
+      ref: conn.ref,
+      description: `${conn.value} — ${conn.description}`,
+      pins: connNets.map((n) => {
+        const node = n.nodes.find((nd) => nd.ref === conn.ref)!;
         return { pin: node.pin, net: n.name, function: node.pinFunction || "" };
       }),
-    });
+    };
+
+    if (isDebugConnector(conn)) {
+      debugInterfaces.push(info);
+    } else {
+      connectors.push(info);
+    }
   }
 
   // Sheets with their nets
@@ -294,13 +345,15 @@ export async function firmwareDatasheet(
     .filter(([name]) => name !== "/")
     .map(([name, nets]) => ({ name, nets: [...nets].sort() }));
 
-  // Generate markdown
   const markdown = generateMarkdown({
     projectName: config.project.name,
     mcu: mcuComp,
     pins,
+    freeGpios,
     powerRails,
+    powerNetNames,
     debugInterfaces,
+    connectors,
     sheets,
     includeTestPoints: opts.includeTestPoints,
   });
@@ -315,8 +368,10 @@ export async function firmwareDatasheet(
       footprint: mcuComp.footprint,
     },
     pins,
+    freeGpios,
     powerRails,
     debugInterfaces,
+    connectors,
     sheets,
     markdown,
   };
@@ -328,49 +383,61 @@ function generateMarkdown(data: {
   projectName: string;
   mcu: NetlistComponent;
   pins: McuPin[];
+  freeGpios: McuPin[];
   powerRails: PowerRail[];
-  debugInterfaces: DebugInterface[];
+  powerNetNames: Set<string>;
+  debugInterfaces: ConnectorInfo[];
+  connectors: ConnectorInfo[];
   sheets: { name: string; nets: string[] }[];
   includeTestPoints?: boolean;
 }): string {
   const lines: string[] = [];
-  const { mcu, pins, powerRails, debugInterfaces, sheets } = data;
+  const { mcu, pins, freeGpios, powerRails, powerNetNames, debugInterfaces, connectors, sheets } = data;
 
   lines.push(`# ${data.projectName} — Firmware Reference`);
   lines.push("");
   lines.push(`## MCU: ${mcu.value} (${mcu.ref})`);
   lines.push("");
   lines.push(`- **Part:** ${mcu.value}`);
-  lines.push(`- **Description:** ${mcu.description}`);
+  if (mcu.description) lines.push(`- **Description:** ${mcu.description}`);
   lines.push(`- **Package:** ${mcu.footprint}`);
   lines.push("");
 
-  // Pin table
-  lines.push("## Pin Map");
-  lines.push("");
-  lines.push("| Pin | Function | Net | Purpose | Connected To |");
-  lines.push("|-----|----------|-----|---------|-------------|");
-
-  const signalPins = pins.filter((p) => !p.isUnconnected);
-  for (const p of signalPins) {
-    if (!data.includeTestPoints && p.connectedTo.every((c) => c.startsWith("TP"))) continue;
-    const connected = p.connectedTo.join(", ");
-    lines.push(`| ${p.pin} | ${p.function} | ${p.net} | ${p.purpose} | ${connected} |`);
+  // Signal pin table (exclude power/GND — those go in power rails section)
+  const signalPins = pins.filter((p) => !p.isUnconnected && !powerNetNames.has(p.net));
+  if (signalPins.length > 0) {
+    lines.push("## Pin Map");
+    lines.push("");
+    lines.push("| Pin | Function | Net | Purpose | Connected To |");
+    lines.push("|-----|----------|-----|---------|-------------|");
+    for (const p of signalPins) {
+      const connected = p.connectedTo.join(", ");
+      lines.push(`| ${p.pin} | ${p.function} | ${p.net} | ${p.purpose} | ${connected} |`);
+    }
+    lines.push("");
   }
-  lines.push("");
 
+  // Free GPIOs
+  if (freeGpios.length > 0) {
+    lines.push("## Unconnected Pins");
+    lines.push("");
+    lines.push(
+      freeGpios.map((p) => `- **${p.function}** (pin ${p.pin})`).join("\n"),
+    );
+    lines.push("");
+  }
 
   // Power rails
   if (powerRails.length > 0) {
     lines.push("## Power Rails");
     lines.push("");
-    lines.push("| Rail | Components | Source |");
-    lines.push("|------|-----------|--------|");
+    lines.push("| Rail | Source | Loads |");
+    lines.push("|------|--------|-------|");
     for (const rail of powerRails) {
-      const comps = rail.components.length > 8
-        ? `${rail.components.slice(0, 8).join(", ")}... (${rail.components.length} total)`
-        : rail.components.join(", ");
-      lines.push(`| ${rail.net} | ${comps} | ${rail.description} |`);
+      const loads = rail.loads.length > 10
+        ? `${rail.loads.slice(0, 10).join(", ")}... (${rail.loads.length} total)`
+        : rail.loads.join(", ");
+      lines.push(`| ${rail.net} | ${rail.source || "—"} | ${loads} |`);
     }
     lines.push("");
   }
@@ -380,11 +447,27 @@ function generateMarkdown(data: {
     lines.push("## Debug Interfaces");
     lines.push("");
     for (const dbg of debugInterfaces) {
-      lines.push(`### ${dbg.connector}: ${dbg.description}`);
+      lines.push(`### ${dbg.ref}: ${dbg.description}`);
       lines.push("");
       lines.push("| Pin | Net | Function |");
       lines.push("|-----|-----|----------|");
       for (const p of dbg.pins) {
+        lines.push(`| ${p.pin} | ${p.net} | ${p.function} |`);
+      }
+      lines.push("");
+    }
+  }
+
+  // Other connectors (non-debug)
+  if (connectors.length > 0) {
+    lines.push("## Connectors");
+    lines.push("");
+    for (const conn of connectors) {
+      lines.push(`### ${conn.ref}: ${conn.description}`);
+      lines.push("");
+      lines.push("| Pin | Net | Function |");
+      lines.push("|-----|-----|----------|");
+      for (const p of conn.pins) {
         lines.push(`| ${p.pin} | ${p.net} | ${p.function} |`);
       }
       lines.push("");
