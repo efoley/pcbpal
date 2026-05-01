@@ -6,7 +6,7 @@ both humans and AI coding agents (Claude Code, Gemini CLI, etc.).
 ## What it does
 
 pcbpal sits between you and KiCad. KiCad owns the schematics and layout;
-pcbpal owns the *intent* layer — what parts you chose and why, what your
+pcbpal owns the *intent* layer: what parts you chose and why, what your
 production constraints are, and how to turn a finished design into
 fabrication files.
 
@@ -22,16 +22,12 @@ fabrication files.
 
 ## Philosophy
 
-pcbpal is a CLI tool, not a GUI. Every command supports `--json` for
-structured output. This makes it a first-class tool for AI coding agents:
-an agent can run `pcbpal bom check --json`, read the structured result,
-and act on it — no screen scraping needed.
+pcbpal is a CLI tool.  Every command supports `--json` for structured output.
 
-The tool doesn't try to replace KiCad or build its own LLM interface.
+pcbpal doesn't try to replace KiCad or build its own LLM interface.
 Instead, it prepares data (netlists, SVGs, BOM summaries) that your
-preferred AI tool can reason about. The `review` command exports context;
-the `firmware-datasheet` command extracts pin maps from the netlist.
-The AI does the thinking; pcbpal does the plumbing.
+preferred AI tool can reason about. pcbpal just provides boring plumbing
+to make your coding agent work better while spending fewer tokens. 
 
 ## Install
 
@@ -66,10 +62,10 @@ pcbpal doctor                        # check that everything is set up correctly
 
 | File | Purpose |
 |------|---------|
-| `pcbpal.toml` | Project config — name, KiCad project path, fab defaults |
+| `pcbpal.toml` | Project config: name, KiCad project path, fab defaults |
 | `pcbpal.bom.json` | Bill of materials with roles, sources, and refs |
 | `pcbpal.production.json` | Board specs, stackup, placement corrections |
-| `.pcbpal/` | Cache — fetched libraries, production output, review context |
+| `.pcbpal/` | Cache: fetched libraries, production output, review context |
 
 ## License
 
