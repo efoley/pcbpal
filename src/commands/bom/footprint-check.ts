@@ -1,17 +1,17 @@
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { BomDatabase, BomEntry } from "../../schemas/bom.js";
+import type { BomDatabase } from "../../schemas/bom.js";
 import {
+  compareFootprints,
   type FootprintComparison,
   type FootprintGeometry,
-  compareFootprints,
   readFootprint,
   renderFootprintSvg,
   resolveFootprintPath,
 } from "../../services/footprint.js";
-import { type KicadComponent, readSchematicComponents } from "../../services/kicad.js";
+import { readSchematicComponents } from "../../services/kicad.js";
+import { findProjectRoot, readBom } from "../../services/project.js";
 import { checkEasyeda2kicad, libFetch } from "../lib/core.js";
-import { findProjectRoot, readBom, readConfig } from "../../services/project.js";
 
 export interface FpCheckEntry {
   ref: string;
@@ -87,18 +87,14 @@ export async function footprintCheck(
   const refToLcsc = buildRefToLcsc(bom);
 
   // Filter to requested refs, or all refs that have both footprint + LCSC
-  let components = schComponents.filter(
-    (c) => c.footprint && refToLcsc.has(c.ref),
-  );
+  let components = schComponents.filter((c) => c.footprint && refToLcsc.has(c.ref));
   if (opts.refs) {
     const requested = new Set(opts.refs);
     components = components.filter((c) => requested.has(c.ref));
   }
 
   if (components.length === 0) {
-    throw new Error(
-      "No components with both a KiCad footprint and LCSC part number found",
-    );
+    throw new Error("No components with both a KiCad footprint and LCSC part number found");
   }
 
   // Check if easyeda2kicad is available (needed for LCSC footprint fetching)
@@ -112,10 +108,7 @@ export async function footprintCheck(
   const outputDir = join(root, ".pcbpal", "footprint-check");
   await mkdir(outputDir, { recursive: true });
 
-  const extraLibDirs = [
-    join(root, ".pcbpal", "lib"),
-    join(root, ".pcbpal", "kicad-libs"),
-  ];
+  const extraLibDirs = [join(root, ".pcbpal", "lib"), join(root, ".pcbpal", "kicad-libs")];
 
   const entries: FpCheckEntry[] = [];
 
@@ -176,7 +169,7 @@ export async function footprintCheck(
           lcscFootprintCache.set(lcsc, null);
         }
       }
-      entry.lcscGeometry = lcscFootprintCache.get(lcsc!) ?? null;
+      entry.lcscGeometry = (lcsc ? lcscFootprintCache.get(lcsc) : null) ?? null;
     }
 
     // Compare
@@ -205,11 +198,7 @@ export async function footprintCheck(
           if (lib && fpName) {
             const kicadPath = await resolveFootprintPath(comp.footprint, extraLibDirs);
             if (kicadPath) {
-              entry.kicadSvg = await renderFootprintSvg(
-                dirname(kicadPath),
-                fpName,
-                svgDir,
-              );
+              entry.kicadSvg = await renderFootprintSvg(dirname(kicadPath), fpName, svgDir);
               // Rename to disambiguate
               if (entry.kicadSvg) {
                 const { rename } = await import("node:fs/promises");

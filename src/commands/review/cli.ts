@@ -3,11 +3,7 @@ import type { Command } from "commander";
 import pc from "picocolors";
 import { isInteractive } from "../../cli/context.js";
 import { fatal, output } from "../../cli/output.js";
-import {
-  type ReviewContext,
-  type ReviewTarget,
-  reviewPrepare,
-} from "./core.js";
+import { type ReviewContext, type ReviewTarget, reviewPrepare } from "./core.js";
 
 function renderReviewResult(result: ReviewContext): void {
   if (isInteractive()) {
@@ -55,14 +51,9 @@ export function registerReviewCommand(program: Command): void {
     .option("--context <files>", "Additional context files (comma-separated)")
     .option("--from-jlcpcb", "Read BOM from jlcpcb/project.db")
     .action(
-      async (
-        target: string,
-        opts: { sheet?: string; context?: string; fromJlcpcb?: boolean },
-      ) => {
+      async (target: string, opts: { sheet?: string; context?: string; fromJlcpcb?: boolean }) => {
         if (!VALID_TARGETS.has(target)) {
-          fatal(
-            `Invalid target "${target}". Valid targets: ${[...VALID_TARGETS].join(", ")}`,
-          );
+          fatal(`Invalid target "${target}". Valid targets: ${[...VALID_TARGETS].join(", ")}`);
         }
 
         try {
@@ -79,7 +70,7 @@ export function registerReviewCommand(program: Command): void {
               contextFiles: opts.context?.split(",").map((f) => f.trim()),
               fromJlcpcb: opts.fromJlcpcb,
             },
-            spinner ? (msg) => spinner!.message(msg) : undefined,
+            spinner ? (msg) => spinner?.message(msg) : undefined,
           );
 
           if (spinner) spinner.stop("Done");

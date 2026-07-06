@@ -1,6 +1,6 @@
-import * as clack from "@clack/prompts";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import * as clack from "@clack/prompts";
 import type { Command } from "commander";
 import pc from "picocolors";
 import { isInteractive } from "../../cli/context.js";
@@ -10,20 +10,14 @@ import { type FirmwareDatasheetResult, firmwareDatasheet } from "./core.js";
 
 function renderFirmwareResult(result: FirmwareDatasheetResult): void {
   if (isInteractive()) {
-    clack.log.success(
-      `Firmware reference for ${pc.bold(result.mcu.value)} (${result.mcu.ref})`,
-    );
+    clack.log.success(`Firmware reference for ${pc.bold(result.mcu.value)} (${result.mcu.ref})`);
     const signalCount = result.pins.filter((p) => !p.isUnconnected).length;
-    clack.log.info(
-      `${signalCount} signal pins, ${result.freeGpios.length} unconnected`,
-    );
+    clack.log.info(`${signalCount} signal pins, ${result.freeGpios.length} unconnected`);
     if (result.powerRails.length > 0) {
       clack.log.info(`${result.powerRails.length} power rails`);
     }
     if (result.debugInterfaces.length > 0) {
-      clack.log.info(
-        `Debug: ${result.debugInterfaces.map((d) => d.ref).join(", ")}`,
-      );
+      clack.log.info(`Debug: ${result.debugInterfaces.map((d) => d.ref).join(", ")}`);
     }
   } else {
     console.log(result.markdown);
@@ -58,7 +52,10 @@ export function registerFirmwareCommand(program: Command): void {
 
           // Write markdown file
           const root = await findProjectRoot();
-          const outPath = opts.output ?? join(root!, "firmware_CLAUDE.md");
+          if (!root) {
+            fatal("Not in a pcbpal project (no pcbpal.toml found)");
+          }
+          const outPath = opts.output ?? join(root, "firmware_CLAUDE.md");
           await writeFile(outPath, result.markdown, "utf-8");
 
           output(result, renderFirmwareResult);

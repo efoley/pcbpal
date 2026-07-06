@@ -33,7 +33,10 @@ export interface SubcircuitWarning {
  * Uses Bun.build() to transpile the TSX so that react/jsx-runtime resolves
  * from pcbpal's own node_modules, not the user's project directory.
  */
-export async function buildSubcircuit(tsxPath: string, name: string): Promise<SubcircuitBuildResult> {
+export async function buildSubcircuit(
+  tsxPath: string,
+  name: string,
+): Promise<SubcircuitBuildResult> {
   const { RootCircuit } = await import("@tscircuit/core");
   const { createElement } = await import("react");
 
@@ -105,9 +108,7 @@ export async function buildSubcircuit(tsxPath: string, name: string): Promise<Su
     const circuitJson = circuit.getCircuitJson();
 
     // Count components and nets
-    const componentCount = circuitJson.filter(
-      (el: any) => el.type === "source_component",
-    ).length;
+    const componentCount = circuitJson.filter((el: any) => el.type === "source_component").length;
     const netCount = circuitJson.filter((el: any) => el.type === "source_net").length;
 
     // Extract any errors/warnings from the circuit JSON

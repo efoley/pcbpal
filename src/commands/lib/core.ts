@@ -1,4 +1,4 @@
-import { exists, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { exists, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { assignFootprints } from "../../services/kicad.js";
 import { findProjectRoot } from "../../services/project.js";
@@ -33,8 +33,7 @@ export async function checkEasyeda2kicad(): Promise<{ ok: boolean; message: stri
   } catch {
     return {
       ok: false,
-      message:
-        "easyeda2kicad not found — install with: pipx install easyeda2kicad",
+      message: "easyeda2kicad not found — install with: pipx install easyeda2kicad",
     };
   }
 }
@@ -55,8 +54,7 @@ export interface LibInstallResult {
 function parseLibTableNames(content: string): Set<string> {
   const names = new Set<string>();
   const regex = /\(lib\s+\(name\s+"([^"]+)"\)/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(content)) !== null) {
+  for (const match of content.matchAll(regex)) {
     names.add(match[1]);
   }
   return names;
@@ -98,7 +96,7 @@ async function addToLibTable(
   // Insert new entries before the closing paren
   const closingIdx = content.lastIndexOf(")");
   const before = content.slice(0, closingIdx);
-  const updated = before + newLines.join("\n") + "\n)\n";
+  const updated = `${before + newLines.join("\n")}\n)\n`;
   await writeFile(tablePath, updated, "utf-8");
 
   return added;
@@ -110,10 +108,7 @@ const PCBPAL_LIB_NAME = "pcbpal";
  * Remove library table entries whose names are in the given set
  * (old per-component pcbpal entries like "C173752").
  */
-async function removePcbpalEntries(
-  tablePath: string,
-  namesToRemove: Set<string>,
-): Promise<void> {
+async function removePcbpalEntries(tablePath: string, namesToRemove: Set<string>): Promise<void> {
   if (!(await exists(tablePath))) return;
   const content = await readFile(tablePath, "utf-8");
   const lines = content.split("\n");
@@ -136,13 +131,23 @@ export async function libInstall(): Promise<LibInstallResult> {
 
   const libDir = join(root, ".pcbpal", "lib");
   if (!(await exists(libDir))) {
-    return { ok: true, symbolsAdded: [], footprintsAdded: [], symbolsExisting: 0, footprintsExisting: 0 };
+    return {
+      ok: true,
+      symbolsAdded: [],
+      footprintsAdded: [],
+      symbolsExisting: 0,
+      footprintsExisting: 0,
+    };
   }
 
   const files = await readdir(libDir);
   // Exclude the merged output files from the input list
-  const symFiles = files.filter((f) => f.endsWith(".kicad_sym") && f !== `${PCBPAL_LIB_NAME}.kicad_sym`);
-  const prettyDirs = files.filter((f) => f.endsWith(".pretty") && f !== `${PCBPAL_LIB_NAME}.pretty`);
+  const symFiles = files.filter(
+    (f) => f.endsWith(".kicad_sym") && f !== `${PCBPAL_LIB_NAME}.kicad_sym`,
+  );
+  const prettyDirs = files.filter(
+    (f) => f.endsWith(".pretty") && f !== `${PCBPAL_LIB_NAME}.pretty`,
+  );
 
   // ── Merge symbols into pcbpal.kicad_sym ──
   const symbolsAdded: string[] = [];
@@ -155,8 +160,7 @@ export async function libInstall(): Promise<LibInstallResult> {
     // Extract symbol blocks from the file (everything between the outer parens)
     // Each file has: (kicad_symbol_lib (version ...) (generator ...) (symbol "Name" ...))
     const symbolRegex = /(\(symbol\s+"[^"]+?"[\s\S]*?\n\s{2}\))/g;
-    let match: RegExpExecArray | null;
-    while ((match = symbolRegex.exec(content)) !== null) {
+    for (const match of content.matchAll(symbolRegex)) {
       let block = match[1];
       // Rewrite Footprint property: "C173752:FP_NAME" → "pcbpal:FP_NAME"
       block = block.replace(
@@ -175,14 +179,14 @@ export async function libInstall(): Promise<LibInstallResult> {
       "(kicad_symbol_lib",
       "  (version 20211014)",
       '  (generator "pcbpal")',
-      ...symbolBlocks.map((b) => "  " + b.replace(/\n/g, "\n  ")),
+      ...symbolBlocks.map((b) => `  ${b.replace(/\n/g, "\n  ")}`),
       ")",
       "",
     ].join("\n");
     await writeFile(mergedPath, merged, "utf-8");
 
     // Upgrade to current KiCad format (adds exclude_from_sim, fixes indentation, etc.)
-    const tmpPath = mergedPath + ".tmp";
+    const tmpPath = `${mergedPath}.tmp`;
     const upgradeProc = Bun.spawn(
       ["kicad-cli", "sym", "upgrade", mergedPath, "--force", "-o", tmpPath],
       { stdout: "pipe", stderr: "pipe" },
@@ -219,7 +223,9 @@ export async function libInstall(): Promise<LibInstallResult> {
 
   const lcscNames = new Set([
     ...symFiles.map((f) => f.replace(".kicad_sym", "")),
-    ...prettyDirs.filter((d) => d !== `${PCBPAL_LIB_NAME}.pretty`).map((d) => d.replace(".pretty", "")),
+    ...prettyDirs
+      .filter((d) => d !== `${PCBPAL_LIB_NAME}.pretty`)
+      .map((d) => d.replace(".pretty", "")),
   ]);
   await removePcbpalEntries(symTablePath, lcscNames);
   await removePcbpalEntries(fpTablePath, lcscNames);
@@ -271,8 +277,7 @@ export async function libList(): Promise<LibListResult> {
 
   // Match top-level symbols (one tab indent, not sub-symbols like Name_0_1)
   const symRegex = /\t\(symbol "([^"]+)"[\s\S]*?(?=\n\t\(symbol "|\n\)$)/g;
-  let match: RegExpExecArray | null;
-  while ((match = symRegex.exec(content)) !== null) {
+  for (const match of content.matchAll(symRegex)) {
     const name = match[1];
     // Skip sub-symbols (Name_0_1, Name_1_1, etc.)
     if (/_\d+_\d+$/.test(name)) continue;

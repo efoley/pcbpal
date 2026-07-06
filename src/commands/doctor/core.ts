@@ -115,10 +115,7 @@ export async function runDoctor(): Promise<DoctorResult> {
     checks.push({
       name: "easyeda2kicad",
       ok: e2kExit === 0,
-      message:
-        e2kExit === 0
-          ? "Found"
-          : "easyeda2kicad returned an error",
+      message: e2kExit === 0 ? "Found" : "easyeda2kicad returned an error",
     });
   } catch {
     checks.push({

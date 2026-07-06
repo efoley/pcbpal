@@ -1,13 +1,8 @@
-import { readFile, mkdir, writeFile } from "node:fs/promises";
-import { join, basename } from "node:path";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
+import type { BomDatabase } from "../../schemas/bom.js";
 import { readSchematicComponents } from "../../services/kicad.js";
-import {
-  findProjectRoot,
-  readBom,
-  readConfig,
-  readProduction,
-} from "../../services/project.js";
+import { findProjectRoot, readBom, readConfig, readProduction } from "../../services/project.js";
 
 // ── Types ──
 
@@ -88,15 +83,18 @@ async function runKicadCli(args: string[], outFile?: string): Promise<string> {
 // ── Target exporters ──
 
 async function exportSchematic(
-  root: string,
+  _root: string,
   schPath: string,
   outDir: string,
   sheet?: string,
 ): Promise<string[]> {
   const args = [
-    "sch", "export", "svg",
+    "sch",
+    "export",
+    "svg",
     schPath,
-    "-o", outDir + "/",
+    "-o",
+    `${outDir}/`,
     "--no-background-color",
     "--exclude-drawing-sheet",
   ];
@@ -109,17 +107,19 @@ async function exportSchematic(
   return files.filter((f) => f.endsWith(".svg")).map((f) => join(outDir, f));
 }
 
-async function exportPcbSvg(
-  pcbPath: string,
-  outDir: string,
-): Promise<string[]> {
+async function exportPcbSvg(pcbPath: string, outDir: string): Promise<string[]> {
   const svgPath = join(outDir, "pcb-layout.svg");
   await runKicadCli([
-    "pcb", "export", "svg",
+    "pcb",
+    "export",
+    "svg",
     pcbPath,
-    "-o", svgPath,
-    "--layers", "F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,Edge.Cuts",
-    "--page-size-mode", "2",
+    "-o",
+    svgPath,
+    "--layers",
+    "F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,Edge.Cuts",
+    "--page-size-mode",
+    "2",
     "--exclude-drawing-sheet",
   ]);
   return [svgPath];
@@ -131,12 +131,16 @@ async function exportDrc(
 ): Promise<{ path: string; data: unknown }> {
   const drcPath = join(outDir, "drc.json");
   await runKicadCli([
-    "pcb", "drc",
+    "pcb",
+    "drc",
     pcbPath,
-    "--format", "json",
+    "--format",
+    "json",
     "--severity-all",
-    "--units", "mm",
-    "-o", drcPath,
+    "--units",
+    "mm",
+    "-o",
+    drcPath,
   ]);
   const content = await readFile(drcPath, "utf-8");
   return { path: drcPath, data: JSON.parse(content) };
@@ -146,7 +150,7 @@ async function buildBomSummary(
   root: string,
   fromJlcpcb: boolean,
 ): Promise<ReviewContextData["bom"]> {
-  let bom;
+  let bom: BomDatabase;
   if (fromJlcpcb) {
     const { readJlcpcbDb } = await import("../bom/check.js");
     bom = await readJlcpcbDb(root);
@@ -154,9 +158,7 @@ async function buildBomSummary(
     bom = await readBom(root);
   }
 
-  const withLcsc = bom.entries.filter((e) =>
-    e.sources.some((s) => s.supplier === "lcsc"),
-  ).length;
+  const withLcsc = bom.entries.filter((e) => e.sources.some((s) => s.supplier === "lcsc")).length;
   const withoutSource = bom.entries.filter((e) => e.sources.length === 0).length;
   const candidates = bom.entries.filter((e) => e.status === "candidate").length;
 

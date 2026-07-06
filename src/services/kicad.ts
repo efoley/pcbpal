@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
@@ -13,12 +13,12 @@ export async function findKicadProjects(dir: string): Promise<string[]> {
  * A component placement extracted from a KiCad schematic.
  */
 export interface KicadComponent {
-  ref: string;           // e.g. "R5", "U3", "C10"
-  footprint: string;     // e.g. "Resistor_SMD:R_0603_1608Metric"
-  value: string;         // e.g. "10k", "100nF"
-  libId: string;         // e.g. "Device:C", "Amplifier_Operational:LM324"
-  description: string;   // e.g. "Unpolarized capacitor"
-  datasheet: string;     // URL or "~"
+  ref: string; // e.g. "R5", "U3", "C10"
+  footprint: string; // e.g. "Resistor_SMD:R_0603_1608Metric"
+  value: string; // e.g. "10k", "100nF"
+  libId: string; // e.g. "Device:C", "Amplifier_Operational:LM324"
+  description: string; // e.g. "Unpolarized capacitor"
+  datasheet: string; // URL or "~"
 }
 
 /**
@@ -31,9 +31,8 @@ function extractComponentsFromSch(content: string): KicadComponent[] {
 
   // Match top-level (symbol ...) blocks — placed instances end at \n\t)
   const symbolRegex = /\(symbol\s[\s\S]*?\n\t\)/g;
-  let match: RegExpExecArray | null;
 
-  while ((match = symbolRegex.exec(content)) !== null) {
+  for (const match of content.matchAll(symbolRegex)) {
     const block = match[0];
 
     const refs = [...block.matchAll(/\(property\s+"Reference"\s+"([^"]+)"/g)];
@@ -53,7 +52,14 @@ function extractComponentsFromSch(content: string): KicadComponent[] {
 
     // Only include actual placed components (ref has a number, skip power symbols)
     if (ref && /\d/.test(ref) && !ref.startsWith("#") && fp) {
-      results.push({ ref, footprint: fp, value: val ?? "", libId, description: desc, datasheet: ds });
+      results.push({
+        ref,
+        footprint: fp,
+        value: val ?? "",
+        libId,
+        description: desc,
+        datasheet: ds,
+      });
     }
   }
 
@@ -65,9 +71,7 @@ function extractComponentsFromSch(content: string): KicadComponent[] {
  * a map of reference designator → footprint + value.
  * Handles hierarchical schematics by reading all .kicad_sch files.
  */
-export async function readSchematicComponents(
-  projectDir: string,
-): Promise<KicadComponent[]> {
+export async function readSchematicComponents(projectDir: string): Promise<KicadComponent[]> {
   const entries = await readdir(projectDir);
   const schFiles = entries.filter((e) => e.endsWith(".kicad_sch"));
 
@@ -109,12 +113,11 @@ export async function assignFootprints(
 
     // Find placed symbol instances and check their reference
     const symbolRegex = /\(symbol\s[\s\S]*?\n\t\)/g;
-    let match: RegExpExecArray | null;
 
     // Collect replacements (work backwards to preserve offsets)
     const replacements: { start: number; end: number; newBlock: string }[] = [];
 
-    while ((match = symbolRegex.exec(content)) !== null) {
+    for (const match of content.matchAll(symbolRegex)) {
       const block = match[0];
       const blockStart = match.index;
 
@@ -130,7 +133,7 @@ export async function assignFootprints(
 
       // Replace the last Footprint match (instance override)
       const lastFp = fpMatches[fpMatches.length - 1];
-      const fpStart = blockStart + lastFp.index!;
+      const fpStart = blockStart + lastFp.index;
       const fpEnd = fpStart + lastFp[0].length;
       const newFp = `${lastFp[1]}"${footprint}"`;
 

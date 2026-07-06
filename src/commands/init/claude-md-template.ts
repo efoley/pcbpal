@@ -8,7 +8,5 @@ export function generateClaudeMd(projectName: string, kicadProject: string | nul
     ? `\nThe KiCad project file is \`${kicadProject}\`. Open it in KiCad to edit schematics and layout.\n`
     : "";
 
-  return template
-    .replace("{{PROJECT_NAME}}", projectName)
-    .replace("{{KICAD_LINE}}", kicadLine);
+  return template.replace("{{PROJECT_NAME}}", projectName).replace("{{KICAD_LINE}}", kicadLine);
 }

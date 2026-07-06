@@ -3,12 +3,12 @@
 import { Command } from "commander";
 import { registerBomCommand } from "../commands/bom/cli.js";
 import { registerDoctorCommand } from "../commands/doctor/cli.js";
+import { registerFirmwareCommand } from "../commands/firmware/cli.js";
 import { registerInitCommand } from "../commands/init/cli.js";
 import { registerLibCommand } from "../commands/lib/cli.js";
-import { registerSearchCommand } from "../commands/search/cli.js";
-import { registerFirmwareCommand } from "../commands/firmware/cli.js";
 import { registerProductionCommand } from "../commands/production/cli.js";
 import { registerReviewCommand } from "../commands/review/cli.js";
+import { registerSearchCommand } from "../commands/search/cli.js";
 import { registerSubCommand } from "../commands/sub/cli.js";
 
 const program = new Command();
