@@ -3,3 +3,11 @@ dist/
 .pcbpal/
 *.tsbuildinfo
 bun.lock
+
+# Claude Code agent worktrees
+.claude/worktrees/
+
+# eval harness: fetched PDFs/renders and timestamped run outputs are not committed
+evals/datasheets/cache/
+evals/results/*
+!evals/results/.gitkeep

@@ -1,7 +1,7 @@
 {
   "name": "pcbpal",
   "version": "0.1.0",
-  "description": "CLI companion tool for PCB design \u2014 BOM management, component search, production config",
+  "description": "CLI companion tool for PCB design — BOM management, component search, production config",
   "type": "module",
   "bin": {
     "pcbpal": "./src/cli/index.ts"
@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "test": "bun test",
+    "evals": "bun evals/src/run.ts",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "lint": "biome lint .",

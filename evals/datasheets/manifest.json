@@ -1,0 +1,30 @@
+{
+  "parts": [
+    {
+      "id": "ams1117-3.3",
+      "mpn": "AMS1117-3.3",
+      "lcsc": "C6186",
+      "pdf_url": "http://www.advanced-monolithic.com/pdf/ds1117.pdf",
+      "pdf_sha256": "TBD",
+      "facets": ["specs", "pins", "circuit"],
+      "circuit_labels": ["typical"],
+      "pages": {
+        "specs": [3, 4],
+        "pins": [1],
+        "circuit-typical": [1]
+      }
+    },
+    {
+      "id": "mp2315",
+      "mpn": "MP2315",
+      "lcsc": "C86790",
+      "pdf_url": "https://www.monolithicpower.com/en/documentview/productdocument/index/version/2/document_type/Datasheet/lang/en/sku/MP2315/document_id/242",
+      "pdf_sha256": "TBD",
+      "facets": ["circuit"],
+      "circuit_labels": ["typical"],
+      "pages": {
+        "circuit-typical": [12]
+      }
+    }
+  ]
+}
