@@ -122,6 +122,121 @@ async function readJlcpcbMappings(
   return map;
 }
 
+/**
+ * One (value, footprint) group of schematic components and the existing BOM
+ * entries that already reference any of its refs.
+ */
+export interface MatchedGroup {
+  /** `${value}\0${footprint}` grouping key. */
+  key: string;
+  /** Sorted reference designators in this group (e.g. ["R1","R2","R3"]). */
+  refs: string[];
+  /** Representative component (group[0]) — carries value/libId/datasheet. */
+  sample: KicadComponent;
+  /** The group's footprint. */
+  footprint: string;
+  /** Distinct ids of existing BOM entries sharing a ref with this group. */
+  entryIds: string[];
+}
+
+/**
+ * Pure schematic↔BOM correspondence produced by {@link matchSchematicToBom}.
+ * `bomSync` applies this plan (adding, updating, orphaning entries); the eval
+ * harness (evals/bom-sync) scores it against golden correspondences. Keeping
+ * the matching a pure function is what makes it testable and CI-able offline.
+ */
+export interface SchBomMatch {
+  /** Clean, footprint-consistent matches: schematic ref → BOM entry id. */
+  refToEntry: Record<string, string>;
+  /** Schematic refs that resolve to no existing entry (would be added). */
+  unmatchedSchRefs: string[];
+  /** Refs matched by ref but whose schematic footprint disagrees with the entry. */
+  footprintMismatches: string[];
+  /** Refs whose group spans more than one existing entry (ambiguous). */
+  ambiguousRefs: string[];
+  /** Ids of existing entries with no live schematic ref. */
+  orphanedEntryIds: string[];
+  /** Per-group breakdown consumed by bomSync when applying the plan. */
+  groups: MatchedGroup[];
+}
+
+/**
+ * Decide how each schematic component maps onto the BOM — with no I/O, no
+ * mutation, no network. Matching semantics (identical to what bomSync acts on):
+ *  - Schematic components are grouped by (value, footprint); footprint-less
+ *    components (power symbols etc.) are dropped, exactly as `groupComponents`.
+ *  - A group resolves to the set of existing BOM entries that already list any
+ *    of the group's refs in `kicad_refs`.
+ *  - size 1 → the group's refs belong to that entry. If the entry records a
+ *    conflicting `kicad_footprint`, the refs are reported as
+ *    `footprintMismatches` rather than clean `refToEntry` matches (bomSync still
+ *    updates the entry — this only surfaces the disagreement for evals).
+ *  - size 0 → the group's refs are unmatched (bomSync would add a new entry).
+ *  - size >1 → ambiguous; bomSync leaves it for manual resolution.
+ *  - Any existing entry whose every ref is absent from the schematic is orphaned.
+ */
+export function matchSchematicToBom(
+  schComponents: KicadComponent[],
+  bomEntries: BomEntry[],
+): SchBomMatch {
+  const groupMap = groupComponents(schComponents);
+
+  // ref → entry id, from the BOM's recorded kicad_refs.
+  const bomRefToEntryId = new Map<string, string>();
+  const entryById = new Map<string, BomEntry>();
+  for (const entry of bomEntries) {
+    entryById.set(entry.id, entry);
+    for (const ref of entry.kicad_refs) bomRefToEntryId.set(ref, entry.id);
+  }
+
+  const schRefs = new Set(schComponents.map((c) => c.ref));
+
+  const refToEntry: Record<string, string> = {};
+  const unmatchedSchRefs: string[] = [];
+  const footprintMismatches: string[] = [];
+  const ambiguousRefs: string[] = [];
+  const groups: MatchedGroup[] = [];
+
+  for (const [key, group] of groupMap) {
+    const refs = group.map((c) => c.ref).sort();
+    const sample = group[0];
+    const entryIds = [
+      ...new Set(refs.map((r) => bomRefToEntryId.get(r)).filter((id): id is string => !!id)),
+    ];
+    groups.push({ key, refs, sample, footprint: sample.footprint, entryIds });
+
+    if (entryIds.length === 1) {
+      const entry = entryById.get(entryIds[0]);
+      const conflict = !!entry?.kicad_footprint && entry.kicad_footprint !== sample.footprint;
+      for (const ref of refs) {
+        if (conflict) footprintMismatches.push(ref);
+        else refToEntry[ref] = entryIds[0];
+      }
+    } else if (entryIds.length === 0) {
+      unmatchedSchRefs.push(...refs);
+    } else {
+      ambiguousRefs.push(...refs);
+    }
+  }
+
+  const orphanedEntryIds: string[] = [];
+  for (const entry of bomEntries) {
+    const deadRefs = entry.kicad_refs.filter((r) => !schRefs.has(r));
+    if (deadRefs.length > 0 && deadRefs.length === entry.kicad_refs.length) {
+      orphanedEntryIds.push(entry.id);
+    }
+  }
+
+  return {
+    refToEntry,
+    unmatchedSchRefs: unmatchedSchRefs.sort(),
+    footprintMismatches: footprintMismatches.sort(),
+    ambiguousRefs: ambiguousRefs.sort(),
+    orphanedEntryIds,
+    groups,
+  };
+}
+
 export async function bomSync(
   opts: SyncOptions = {},
   onProgress?: (msg: string) => void,
@@ -144,16 +259,9 @@ export async function bomSync(
   // Try to get LCSC mappings from JLCPCB plugin DB
   const jlcpcbMap = await readJlcpcbMappings(root);
 
-  // Group schematic components by (value, footprint)
-  const groups = groupComponents(schComponents);
-
-  // Build a set of all refs currently in the BOM
-  const bomRefToEntry = new Map<string, BomEntry>();
-  for (const entry of bom.entries) {
-    for (const ref of entry.kicad_refs) {
-      bomRefToEntry.set(ref, entry);
-    }
-  }
+  // Pure matching plan: which schematic groups map onto which BOM entries.
+  const match = matchSchematicToBom(schComponents, bom.entries);
+  const entryById = new Map(bom.entries.map((e) => [e.id, e]));
 
   // All refs in the schematic
   const schRefs = new Set(schComponents.map((c) => c.ref));
@@ -163,20 +271,14 @@ export async function bomSync(
   const now = new Date().toISOString();
 
   // For each group of components, find or create a BOM entry
-  for (const [, group] of groups) {
-    const refs = group.map((c) => c.ref).sort();
-    const sample = group[0];
+  for (const grp of match.groups) {
+    const refs = grp.refs;
+    const sample = grp.sample;
 
-    // Check if any ref in this group already has a BOM entry
-    const existingEntries = new Set<BomEntry>();
-    for (const ref of refs) {
-      const entry = bomRefToEntry.get(ref);
-      if (entry) existingEntries.add(entry);
-    }
-
-    if (existingEntries.size === 1) {
+    if (grp.entryIds.length === 1) {
       // One existing entry — update its refs
-      const entry = [...existingEntries][0];
+      const entry = entryById.get(grp.entryIds[0]);
+      if (!entry) continue;
       const currentRefs = new Set(entry.kicad_refs);
       const newRefs = refs.filter((r) => !currentRefs.has(r));
       const removedRefs = entry.kicad_refs.filter((r) => !schRefs.has(r));
@@ -196,7 +298,7 @@ export async function bomSync(
           refsRemoved: removedRefs,
         });
       }
-    } else if (existingEntries.size === 0) {
+    } else if (grp.entryIds.length === 0) {
       // No existing entry — create one
       // Try to find an LCSC part number from JLCPCB plugin
       let lcsc: string | null = null;
@@ -259,7 +361,7 @@ export async function bomSync(
       bom.entries.push(entry);
       added.push({ id: entry.id, role, category, refs, lcsc });
     }
-    // If existingEntries.size > 1, the same component group is split across
+    // If grp.entryIds.length > 1, the same component group is split across
     // multiple BOM entries — don't touch, let the user resolve manually.
   }
 
