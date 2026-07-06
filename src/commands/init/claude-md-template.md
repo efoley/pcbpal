@@ -258,6 +258,45 @@ The pin map is extracted from `kicad-cli sch export netlist` — no LLM
 guessing. Purpose annotations come from BOM `role` fields and component
 descriptions.
 
+### Datasheet extraction workflow
+
+```bash
+pcbpal datasheet fetch --lcsc C1525                    # download PDF into .pcbpal/datasheets/
+pcbpal datasheet pages <mpn|lcsc|sha> --list           # list pages with figure/table captions
+pcbpal datasheet extract <mpn|lcsc|sha> --facet specs --prepare
+pcbpal datasheet extract <mpn|lcsc|sha> --facet pins --prepare
+pcbpal datasheet extract <mpn|lcsc|sha> --facet circuit --prepare
+```
+
+`extract --prepare` writes a task package to
+`.pcbpal/datasheets/tasks/<device-slug>-<facet>/`: rendered page PNGs, a
+`schema.json` (the exact JSON Schema to fill), and `instructions.md` (the
+extraction prompt). It tries to auto-detect which pages hold the requested
+facet from figure/table captions in the text layer; if nothing matches, it
+lists the captions it did find and asks for `--pages 3,7-9` explicitly.
+
+Drive it like `review --prepare-only`: run one `extract --prepare` per
+facet, then for each task package:
+
+1. Read `taskDir/instructions.md` and the page images in `taskDir/pages/`.
+2. Produce the extraction JSON matching `taskDir/schema.json` — every fact
+   needs provenance (page + table/figure label); anything not literally on
+   the page goes in `not_found` or gets `confidence: "low"`, never a guess.
+3. Write it to the manifest's `output_file`
+   (`.pcbpal/datasheets/extracted/<device-slug>-<facet>.json`).
+4. Run the manifest's `validate_command` (`pcbpal datasheet validate
+   <output_file> --json`) and fix every error finding; re-run until clean.
+   Warnings are worth a second look against the page images but may stand
+   if they hold up.
+5. For circuit extractions, follow up with `pcbpal datasheet diff
+   <output_file> --refs <U1,C3,C4,...>` to compare against the project's
+   KiCad schematic.
+
+Extracted JSON in `.pcbpal/datasheets/extracted/` is the durable artifact —
+`bom check` and `review` tooling consume it directly instead of re-running
+extraction agents, and the recorded `pdf_sha256` makes staleness against a
+re-fetched datasheet detectable.
+
 ### Health check
 
 ```bash
