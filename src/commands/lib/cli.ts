@@ -139,9 +139,7 @@ function renderListResult(result: LibListResult): void {
 
   const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => visibleLength(r[i]))));
   const line = (cells: string[]) =>
-    cells
-      .map((c, i) => c + " ".repeat(Math.max(0, widths[i] - visibleLength(c))))
-      .join("  ");
+    cells.map((c, i) => c + " ".repeat(Math.max(0, widths[i] - visibleLength(c)))).join("  ");
 
   if (isInteractive()) {
     console.log(pc.bold(line(header)));
