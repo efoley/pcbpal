@@ -3,6 +3,6 @@
   "root": false,
   "extends": "//",
   "files": {
-    "includes": ["src/**/*.ts"]
+    "includes": ["src/**/*.ts", "bom-sync/**/*.ts", "search/**/*.ts", "review/**/*.ts"]
   }
 }

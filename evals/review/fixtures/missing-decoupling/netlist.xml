@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<export version="E">
+  <design>
+    <source>missing-decoupling.kicad_sch</source>
+  </design>
+  <components>
+    <comp ref="U1">
+      <value>AMS1117-3.3</value>
+      <footprint>Package_TO_SOT_SMD:SOT-223-3_TabPin2</footprint>
+      <description>1A Low Dropout regulator, 3.3V fixed output</description>
+      <libsource lib="Regulator_Linear" part="AMS1117-3.3"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="missing-decoupling.kicad_sch"/>
+    </comp>
+    <comp ref="C1">
+      <value>10uF</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <description>Output capacitor</description>
+      <libsource lib="Device" part="C"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="missing-decoupling.kicad_sch"/>
+    </comp>
+    <comp ref="R1">
+      <value>1k</value>
+      <footprint>Resistor_SMD:R_0603_1608Metric</footprint>
+      <description>LED series resistor</description>
+      <libsource lib="Device" part="R"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="missing-decoupling.kicad_sch"/>
+    </comp>
+    <comp ref="D1">
+      <value>LED</value>
+      <footprint>LED_SMD:LED_0603_1608Metric</footprint>
+      <description>Power indicator LED</description>
+      <libsource lib="Device" part="LED"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="missing-decoupling.kicad_sch"/>
+    </comp>
+  </components>
+  <nets>
+    <net code="1" name="VIN">
+      <node ref="U1" pin="3" pinfunction="VI" pintype="power_in"/>
+    </net>
+    <net code="2" name="+3V3">
+      <node ref="U1" pin="2" pinfunction="VO" pintype="power_out"/>
+      <node ref="C1" pin="1" pinfunction="" pintype="passive"/>
+      <node ref="R1" pin="1" pinfunction="" pintype="passive"/>
+    </net>
+    <net code="3" name="GND">
+      <node ref="U1" pin="1" pinfunction="GND" pintype="power_in"/>
+      <node ref="C1" pin="2" pinfunction="" pintype="passive"/>
+      <node ref="D1" pin="2" pinfunction="K" pintype="passive"/>
+    </net>
+    <net code="4" name="Net-(D1-A)">
+      <node ref="R1" pin="2" pinfunction="" pintype="passive"/>
+      <node ref="D1" pin="1" pinfunction="A" pintype="passive"/>
+    </net>
+  </nets>
+</export>

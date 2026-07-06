@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<export version="E">
+  <design>
+    <source>swapped-feedback.kicad_sch</source>
+  </design>
+  <components>
+    <comp ref="U1">
+      <value>TPS62130</value>
+      <footprint>Package_DFN_QFN:VSON-HR-8-1EP_3x2mm</footprint>
+      <description>3-17V 3A step-down converter with adjustable output</description>
+      <libsource lib="Regulator_Switching" part="TPS62130"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="swapped-feedback.kicad_sch"/>
+    </comp>
+    <comp ref="L1">
+      <value>2.2uH</value>
+      <footprint>Inductor_SMD:L_3x3</footprint>
+      <description>Buck inductor</description>
+      <libsource lib="Device" part="L"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="swapped-feedback.kicad_sch"/>
+    </comp>
+    <comp ref="R1">
+      <value>100k</value>
+      <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
+      <description>Feedback divider top resistor (FB to VOUT)</description>
+      <libsource lib="Device" part="R"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="swapped-feedback.kicad_sch"/>
+    </comp>
+    <comp ref="R2">
+      <value>560k</value>
+      <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
+      <description>Feedback divider bottom resistor (FB to GND)</description>
+      <libsource lib="Device" part="R"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="swapped-feedback.kicad_sch"/>
+    </comp>
+    <comp ref="C1">
+      <value>10uF</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <description>Output capacitor</description>
+      <libsource lib="Device" part="C"/>
+      <sheetpath names="/"/>
+      <property name="Sheetfile" value="swapped-feedback.kicad_sch"/>
+    </comp>
+  </components>
+  <nets>
+    <net code="1" name="VOUT">
+      <node ref="U1" pin="1" pinfunction="VOS" pintype="input"/>
+      <node ref="L1" pin="2" pinfunction="" pintype="passive"/>
+      <node ref="R1" pin="1" pinfunction="" pintype="passive"/>
+      <node ref="C1" pin="1" pinfunction="" pintype="passive"/>
+    </net>
+    <net code="2" name="FB">
+      <node ref="U1" pin="5" pinfunction="FB" pintype="input"/>
+      <node ref="R1" pin="2" pinfunction="" pintype="passive"/>
+      <node ref="R2" pin="1" pinfunction="" pintype="passive"/>
+    </net>
+    <net code="3" name="GND">
+      <node ref="U1" pin="7" pinfunction="GND" pintype="power_in"/>
+      <node ref="R2" pin="2" pinfunction="" pintype="passive"/>
+      <node ref="C1" pin="2" pinfunction="" pintype="passive"/>
+    </net>
+    <net code="4" name="SW">
+      <node ref="U1" pin="8" pinfunction="SW" pintype="output"/>
+      <node ref="L1" pin="1" pinfunction="" pintype="passive"/>
+    </net>
+  </nets>
+</export>

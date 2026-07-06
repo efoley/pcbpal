@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "query": "3.3V LDO SOT-23",
+  "recorded_at": "2026-07-06T00:00:00.000Z",
+  "hits": [
+    {
+      "lcsc": "C2903421",
+      "mpn": "LDO-3.3-SOT23-GENERIC",
+      "manufacturer": "Generic",
+      "description": "3.3V 300mA Fixed LDO Linear Voltage Regulator SOT-23",
+      "package": "SOT-23",
+      "stock": 90000,
+      "unit_price_usd": 0.032,
+      "library_type": "extended",
+      "has_footprint": true,
+      "has_symbol": true
+    },
+    {
+      "lcsc": "C5446",
+      "mpn": "XC6206P332MR",
+      "manufacturer": "Torex Semiconductor",
+      "description": "Fixed 3.3V 200mA LDO Regulator, SOT-23 (dropout 250mV)",
+      "package": "SOT-23",
+      "stock": 448000,
+      "unit_price_usd": 0.017,
+      "library_type": "basic",
+      "has_footprint": true,
+      "has_symbol": true
+    },
+    {
+      "lcsc": "C6186",
+      "mpn": "AMS1117-3.3",
+      "manufacturer": "Advanced Monolithic Systems",
+      "description": "1A LDO Regulator 3.3V SOT-223",
+      "package": "SOT-223",
+      "stock": 310000,
+      "unit_price_usd": 0.041,
+      "library_type": "basic",
+      "has_footprint": true,
+      "has_symbol": true
+    }
+  ]
+}

@@ -12,5 +12,5 @@
     "jsx": "react-jsx",
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "bom-sync/**/*.ts", "search/**/*.ts", "review/**/*.ts"]
 }

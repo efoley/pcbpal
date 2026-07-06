@@ -1,0 +1,107 @@
+{
+  "queries": [
+    {
+      "id": "10uf-0402-x5r",
+      "query": "10uF 0402 X5R",
+      "note": "MLCC bypass cap; exact package + dielectric matter",
+      "anyOf": ["C15525", "C52923"],
+      "predicates": {
+        "packageEquals": "0402",
+        "descriptionRegex": "(?i)10\\s*[uµ]f"
+      },
+      "forbidden": ["C16780"]
+    },
+    {
+      "id": "3v3-ldo-sot23",
+      "query": "3.3V LDO SOT-23",
+      "note": "Fixed 3.3V low-dropout regulator in SOT-23",
+      "anyOf": ["C5446", "C6186"],
+      "predicates": {
+        "packageEquals": "SOT-23",
+        "descriptionRegex": "(?i)(ldo|regulator|dropout)"
+      },
+      "forbidden": ["C15525"]
+    },
+    {
+      "id": "usbc-16p-receptacle",
+      "query": "USB-C 16pin receptacle",
+      "note": "16-position USB Type-C connector, power-only variant",
+      "anyOf": ["C165948", "C2765186"],
+      "predicates": {
+        "descriptionRegex": "(?i)(usb|type[- ]?c)"
+      },
+      "forbidden": ["C5446"]
+    },
+    {
+      "id": "2u2-3a-inductor",
+      "query": "2.2uH 3A inductor",
+      "note": "Power inductor for a buck; current rating matters",
+      "anyOf": ["C408412"],
+      "predicates": {
+        "descriptionRegex": "(?i)(inductor|[uµ]h)"
+      },
+      "forbidden": []
+    },
+    {
+      "id": "esp32-c3-module",
+      "query": "ESP32-C3 module",
+      "note": "RF module; MPN family match",
+      "anyOf": ["C2934569"],
+      "predicates": {
+        "mpnRegex": "(?i)esp32-c3"
+      },
+      "forbidden": []
+    },
+    {
+      "id": "ams1117-3v3",
+      "query": "AMS1117-3.3",
+      "note": "Direct part-number style query",
+      "anyOf": ["C6186"],
+      "predicates": {
+        "descriptionRegex": "(?i)(1117|ldo|regulator)"
+      },
+      "forbidden": []
+    },
+    {
+      "id": "0603-red-led",
+      "query": "0603 red LED",
+      "note": "Indicator LED, 0603",
+      "anyOf": ["C2286"],
+      "predicates": {
+        "packageEquals": "0603",
+        "descriptionRegex": "(?i)led"
+      },
+      "forbidden": []
+    },
+    {
+      "id": "schottky-40v-sod123",
+      "query": "40V schottky diode SOD-123",
+      "note": "Rectifier; package + type",
+      "anyOf": ["C8598"],
+      "predicates": {
+        "descriptionRegex": "(?i)(schottky|diode)"
+      },
+      "forbidden": []
+    },
+    {
+      "id": "nmos-30v-sot23",
+      "query": "N-channel MOSFET 30V SOT-23",
+      "note": "Logic-level N-FET",
+      "anyOf": ["C8545"],
+      "predicates": {
+        "descriptionRegex": "(?i)(mosfet|n-channel|transistor)"
+      },
+      "forbidden": []
+    },
+    {
+      "id": "16mhz-crystal",
+      "query": "16MHz crystal SMD",
+      "note": "Timing crystal",
+      "anyOf": ["C13738"],
+      "predicates": {
+        "descriptionRegex": "(?i)(crystal|mhz)"
+      },
+      "forbidden": []
+    }
+  ]
+}

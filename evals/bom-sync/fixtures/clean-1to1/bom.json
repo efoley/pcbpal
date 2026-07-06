@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "aaaaaaaa-0001-0001-0001-000000000001",
+      "role": "10k (0603)",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["R1"],
+      "kicad_footprint": "Resistor_SMD:R_0603_1608Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "bbbbbbbb-0001-0001-0001-000000000001",
+      "role": "100nF (0402)",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["C1"],
+      "kicad_footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "cccccccc-0001-0001-0001-000000000001",
+      "role": "AMS1117-3.3",
+      "category": "ic",
+      "sources": [],
+      "kicad_refs": ["U1"],
+      "kicad_footprint": "Package_TO_SOT_SMD:SOT-223-3_TabPin2",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    }
+  ]
+}
