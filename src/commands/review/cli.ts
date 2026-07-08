@@ -96,7 +96,7 @@ export function registerReviewCommand(program: Command): void {
               contextFiles: opts.context?.split(",").map((f) => f.trim()),
               fromJlcpcb: opts.fromJlcpcb,
             },
-            spinner ? (msg) => spinner!.message(msg) : undefined,
+            spinner ? (msg) => spinner?.message(msg) : undefined,
           );
 
           if (spinner) spinner.stop("Done");

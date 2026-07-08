@@ -3,3 +3,10 @@ dist/
 .pcbpal/
 *.tsbuildinfo
 bun.lock
+
+# Claude Code agent worktrees
+.claude/worktrees/
+
+# eval outputs (harness lives on the evals branches)
+evals/results/
+evals/datasheets/cache/

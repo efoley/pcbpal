@@ -2,7 +2,7 @@ import { exists } from "node:fs/promises";
 import { join } from "node:path";
 import type { BomDatabase, BomEntry } from "../../schemas/bom.js";
 import { type KicadComponent, readSchematicComponents } from "../../services/kicad.js";
-import { lookupPart, type LcscSearchHit } from "../../services/lcsc.js";
+import { type LcscSearchHit, lookupPart } from "../../services/lcsc.js";
 import { findProjectRoot, readBom, readConfig } from "../../services/project.js";
 
 export type IssueSeverity = "error" | "warning" | "info";
@@ -45,9 +45,9 @@ export async function readJlcpcbDb(projectDir: string): Promise<BomDatabase> {
   const { Database } = await import("bun:sqlite");
   const db = new Database(dbPath, { readonly: true });
 
-  const rows = db.query(
-    "SELECT reference, value, footprint, lcsc, stock, exclude_from_bom FROM part_info",
-  ).all() as {
+  const rows = db
+    .query("SELECT reference, value, footprint, lcsc, stock, exclude_from_bom FROM part_info")
+    .all() as {
     reference: string;
     value: string;
     footprint: string;
@@ -74,7 +74,8 @@ export async function readJlcpcbDb(projectDir: string): Promise<BomDatabase> {
   for (const [lcsc, group] of byLcsc) {
     const first = group[0];
     const refs = group.map((r) => r.reference);
-    const stock = typeof first.stock === "number" ? first.stock : parseInt(String(first.stock)) || 0;
+    const stock =
+      typeof first.stock === "number" ? first.stock : parseInt(String(first.stock), 10) || 0;
 
     entries.push({
       id: `jlcpcb-${lcsc}`,
@@ -100,11 +101,7 @@ export async function readJlcpcbDb(projectDir: string): Promise<BomDatabase> {
   return { schema_version: 1, entries };
 }
 
-function issue(
-  severity: IssueSeverity,
-  entry: BomEntry,
-  message: string,
-): BomIssue {
+function issue(severity: IssueSeverity, entry: BomEntry, message: string): BomIssue {
   return {
     severity,
     entry_id: entry.id,
@@ -136,10 +133,7 @@ function normalizePackage(pkg: string): string {
  * Check if an LCSC package is compatible with a KiCad footprint.
  * Returns true if they appear to match, false if definite mismatch, null if can't tell.
  */
-function packageMatchesFootprint(
-  lcscPackage: string,
-  kicadFootprint: string,
-): boolean | null {
+function packageMatchesFootprint(lcscPackage: string, kicadFootprint: string): boolean | null {
   if (!lcscPackage || !kicadFootprint) return null;
   const normLcsc = normalizePackage(lcscPackage);
   const normKicad = normalizePackage(kicadFootprint);
@@ -150,10 +144,7 @@ function packageMatchesFootprint(
 }
 
 /** Run local-only checks that don't need API calls. */
-function checkLocal(
-  bom: BomDatabase,
-  schMap: Map<string, KicadComponent>,
-): BomIssue[] {
+function checkLocal(bom: BomDatabase, schMap: Map<string, KicadComponent>): BomIssue[] {
   const issues: BomIssue[] = [];
 
   for (const entry of bom.entries) {
@@ -175,7 +166,13 @@ function checkLocal(
 
     // Has LCSC source but recorded stock is 0
     if (lcscSource && lcscSource.stock !== undefined && lcscSource.stock === 0) {
-      issues.push(issue("warning", entry, `Recorded stock is 0 for ${lcscSource.part_number} (may be stale — run without --offline to refresh)`));
+      issues.push(
+        issue(
+          "warning",
+          entry,
+          `Recorded stock is 0 for ${lcscSource.part_number} (may be stale — run without --offline to refresh)`,
+        ),
+      );
     }
 
     // Check that linked refs actually exist in the schematic
@@ -369,9 +366,7 @@ export async function bomCheck(
   if (!opts.offline) {
     const onlineIssues = await checkOnline(bom, schMap, onProgress);
     issues.push(...onlineIssues);
-    entriesChecked = bom.entries.filter((e) =>
-      e.sources.some((s) => s.supplier === "lcsc"),
-    ).length;
+    entriesChecked = bom.entries.filter((e) => e.sources.some((s) => s.supplier === "lcsc")).length;
   }
 
   // Deduplicate (duplicate-ref issues may appear twice)

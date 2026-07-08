@@ -1,7 +1,7 @@
 {
   "name": "pcbpal",
   "version": "0.1.0",
-  "description": "CLI companion tool for PCB design — BOM management, component search, production config",
+  "description": "CLI companion tool for PCB design \u2014 BOM management, component search, production config",
   "type": "module",
   "bin": {
     "pcbpal": "./src/cli/index.ts"
@@ -25,7 +25,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
+    "@biomejs/biome": "2.5.2",
     "@types/bun": "^1.2.4",
     "typescript": "^5.7.3"
   }

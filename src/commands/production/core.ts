@@ -1,12 +1,7 @@
-import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import type { PlacementCorrection } from "../../schemas/production.js";
-import {
-  findProjectRoot,
-  readBom,
-  readConfig,
-  readProduction,
-} from "../../services/project.js";
+import { findProjectRoot, readBom, readConfig, readProduction } from "../../services/project.js";
 
 // ── Types ──
 
@@ -43,10 +38,7 @@ interface PosEntry {
   layer: string;
 }
 
-async function exportPositionCsv(
-  pcbPath: string,
-  useDrillOrigin: boolean,
-): Promise<PosEntry[]> {
+async function exportPositionCsv(pcbPath: string, useDrillOrigin: boolean): Promise<PosEntry[]> {
   const { tmpdir } = await import("node:os");
   const tmpFile = join(tmpdir(), `pcbpal-pos-${Date.now()}.csv`);
 
@@ -143,10 +135,7 @@ interface BomCsvRow {
   quantity: number;
 }
 
-function buildBomCsv(
-  refToLcsc: Map<string, string>,
-  positions: PosEntry[],
-): BomCsvRow[] {
+function buildBomCsv(refToLcsc: Map<string, string>, positions: PosEntry[]): BomCsvRow[] {
   // Group by LCSC part number
   const byLcsc = new Map<string, { refs: string[]; value: string; footprint: string }>();
 
@@ -204,10 +193,15 @@ async function exportGerbers(
 
   // Export gerbers
   const gerberArgs = [
-    "kicad-cli", "pcb", "export", "gerbers",
+    "kicad-cli",
+    "pcb",
+    "export",
+    "gerbers",
     pcbPath,
-    "-o", outDir + "/",
-    "--layers", allLayers.join(","),
+    "-o",
+    `${outDir}/`,
+    "--layers",
+    allLayers.join(","),
     "--no-x2",
     "--subtract-soldermask",
   ];
@@ -223,13 +217,21 @@ async function exportGerbers(
 
   // Export drill files
   const drillArgs = [
-    "kicad-cli", "pcb", "export", "drill",
+    "kicad-cli",
+    "pcb",
+    "export",
+    "drill",
     pcbPath,
-    "-o", outDir + "/",
-    "--format", "excellon",
-    "--excellon-units", "mm",
-    "--excellon-zeros-format", "decimal",
-    "--excellon-oval-format", "alternate",
+    "-o",
+    `${outDir}/`,
+    "--format",
+    "excellon",
+    "--excellon-units",
+    "mm",
+    "--excellon-zeros-format",
+    "decimal",
+    "--excellon-oval-format",
+    "alternate",
     "--excellon-separate-th",
   ];
   if (useDrillOrigin) drillArgs.push("--drill-origin", "plot");
@@ -247,16 +249,12 @@ async function exportGerbers(
   return files.filter((f) => !f.endsWith(".gbrjob") && !f.startsWith("."));
 }
 
-async function createZip(
-  sourceDir: string,
-  files: string[],
-  zipPath: string,
-): Promise<void> {
+async function createZip(sourceDir: string, files: string[], zipPath: string): Promise<void> {
   // Use system zip command
-  const proc = Bun.spawn(
-    ["zip", "-j", zipPath, ...files.map((f) => join(sourceDir, f))],
-    { stdout: "pipe", stderr: "pipe" },
-  );
+  const proc = Bun.spawn(["zip", "-j", zipPath, ...files.map((f) => join(sourceDir, f))], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   await new Response(proc.stdout).text();
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
@@ -336,7 +334,7 @@ export async function productionExport(opts: ExportOptions = {}): Promise<Export
   }
 
   const cplPath = join(outDir, `CPL-${projectName}.csv`);
-  await writeFile(cplPath, cplLines.join("\n") + "\n", "utf-8");
+  await writeFile(cplPath, `${cplLines.join("\n")}\n`, "utf-8");
 
   // Generate BOM CSV
   const bomRows = buildBomCsv(refToLcsc, positions);
@@ -348,7 +346,7 @@ export async function productionExport(opts: ExportOptions = {}): Promise<Export
   }
 
   const bomPath = join(outDir, `BOM-${projectName}.csv`);
-  await writeFile(bomPath, bomLines.join("\n") + "\n", "utf-8");
+  await writeFile(bomPath, `${bomLines.join("\n")}\n`, "utf-8");
 
   // Generate gerbers + drill files
   const gerberDir = join(outDir, "gerbers");
