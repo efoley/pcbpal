@@ -2,7 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { BomDatabase } from "../../schemas/bom.js";
 import { readSchematicComponents } from "../../services/kicad.js";
+import { exportNetlist, type Netlist } from "../../services/netlist.js";
 import { findProjectRoot, readBom, readConfig, readProduction } from "../../services/project.js";
+import { svgToolAvailable, svgToPng } from "../../services/svg.js";
 
 // ── Types ──
 
@@ -24,10 +26,19 @@ export interface ReviewContext {
   outputDir: string;
   /** Paths to exported SVG images. */
   images: string[];
+  /** Paths to PNG renders of `images`, produced via rsvg-convert (empty if unavailable). */
+  pngImages: string[];
   /** Path to context.json summary. */
   contextJsonPath: string;
   /** The context data itself. */
   context: ReviewContextData;
+}
+
+/** A single net, digested from the schematic netlist for text-based review. */
+export interface NetDigestEntry {
+  name: string;
+  /** "REF.pin" or "REF.pin(pinFunction)" when the netlist names the pin function. */
+  pins: string[];
 }
 
 export interface ReviewContextData {
@@ -35,7 +46,13 @@ export interface ReviewContextData {
   target: ReviewTarget;
   timestamp: string;
   images: string[];
+  /** Paths to PNG renders of `images`, produced via rsvg-convert (empty if unavailable). */
+  pngImages: string[];
   schematicComponents?: { ref: string; value: string; footprint: string }[];
+  /** Net-to-pin connectivity digested from the schematic netlist (schematic/bom targets). */
+  nets?: NetDigestEntry[];
+  /** Path to the standalone text rendering of `nets` (see buildNetsDigest). */
+  netsTextPath?: string;
   bom?: {
     entries: number;
     withLcsc: number;
@@ -56,9 +73,32 @@ export interface ReviewContextData {
     placementCorrections?: number;
   };
   additionalContext?: string[];
+  warnings?: string[];
 }
 
 // ── Helpers ──
+
+/**
+ * Digest a parsed netlist into a flat net→pins list for text-based review,
+ * so an LLM can trace connectivity without reasoning over schematic images.
+ * Nets are sorted by name; pins within a net are sorted lexically.
+ */
+export function buildNetsDigest(netlist: Netlist): NetDigestEntry[] {
+  const digest = netlist.nets.map((net) => {
+    const pins = net.nodes.map((node) =>
+      node.pinFunction ? `${node.ref}.${node.pin}(${node.pinFunction})` : `${node.ref}.${node.pin}`,
+    );
+    pins.sort((a, b) => a.localeCompare(b));
+    return { name: net.name, pins };
+  });
+  digest.sort((a, b) => a.name.localeCompare(b.name));
+  return digest;
+}
+
+/** Render a nets digest as the standalone `nets.txt` text format. */
+function renderNetsText(nets: NetDigestEntry[]): string {
+  return `${nets.map((n) => `Net "${n.name}": ${n.pins.join(", ")}`).join("\n")}\n`;
+}
 
 async function runKicadCli(args: string[], outFile?: string): Promise<string> {
   const proc = Bun.spawn(["kicad-cli", ...args], {
@@ -82,12 +122,7 @@ async function runKicadCli(args: string[], outFile?: string): Promise<string> {
 
 // ── Target exporters ──
 
-async function exportSchematic(
-  _root: string,
-  schPath: string,
-  outDir: string,
-  sheet?: string,
-): Promise<string[]> {
+async function exportSchematic(schPath: string, outDir: string, sheet?: string): Promise<string[]> {
   const args = [
     "sch",
     "export",
@@ -223,6 +258,7 @@ export async function reviewPrepare(
     target: opts.target,
     timestamp: new Date().toISOString(),
     images: [],
+    pngImages: [],
   };
 
   // Always include schematic components and BOM summary as baseline context
@@ -247,11 +283,30 @@ export async function reviewPrepare(
 
   contextData.production = await buildProductionSummary(root);
 
+  // Text netlist digest — lets an LLM trace net connectivity without
+  // reasoning over schematic images. Only meaningful for targets that
+  // read the schematic.
+  if (opts.target === "schematic" || opts.target === "bom") {
+    onProgress?.("Digesting netlist...");
+    try {
+      const netlist = await exportNetlist(schPath);
+      const nets = buildNetsDigest(netlist);
+      contextData.nets = nets;
+
+      const netsTextPath = join(outDir, "nets.txt");
+      await writeFile(netsTextPath, renderNetsText(nets), "utf-8");
+      contextData.netsTextPath = netsTextPath;
+    } catch {
+      // Netlist export requires kicad-cli and a valid schematic — skip
+      // silently, same as the schematicComponents read above.
+    }
+  }
+
   // Target-specific exports
   switch (opts.target) {
     case "schematic": {
       onProgress?.("Exporting schematic SVGs...");
-      const svgs = await exportSchematic(root, schPath, outDir, opts.sheet);
+      const svgs = await exportSchematic(schPath, outDir, opts.sheet);
       images.push(...svgs);
       break;
     }
@@ -281,7 +336,7 @@ export async function reviewPrepare(
       // Optionally export schematic for visual reference
       onProgress?.("Exporting schematic SVGs...");
       try {
-        const svgs = await exportSchematic(root, schPath, outDir);
+        const svgs = await exportSchematic(schPath, outDir);
         images.push(...svgs);
       } catch {
         // Schematic export is optional for BOM review
@@ -295,7 +350,29 @@ export async function reviewPrepare(
     contextData.additionalContext = opts.contextFiles;
   }
 
+  // PNG renders alongside the SVGs — LLM vision APIs handle PNG more
+  // reliably than SVG (some reject SVG outright).
+  const pngImages: string[] = [];
+  if (images.length > 0) {
+    if (await svgToolAvailable()) {
+      onProgress?.("Converting SVGs to PNG...");
+      for (const svg of images) {
+        try {
+          pngImages.push(await svgToPng(svg));
+        } catch {
+          // One bad conversion shouldn't abort the whole review
+        }
+      }
+    } else {
+      contextData.warnings = [
+        ...(contextData.warnings ?? []),
+        "rsvg-convert not found; PNG conversion skipped (apt install librsvg2-bin)",
+      ];
+    }
+  }
+
   contextData.images = images;
+  contextData.pngImages = pngImages;
 
   // Write context.json
   const contextJsonPath = join(outDir, "context.json");
@@ -306,6 +383,7 @@ export async function reviewPrepare(
     target: opts.target,
     outputDir: outDir,
     images,
+    pngImages,
     contextJsonPath,
     context: contextData,
   };

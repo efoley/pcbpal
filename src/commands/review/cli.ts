@@ -13,10 +13,16 @@ function renderReviewResult(result: ReviewContext): void {
     if (result.images.length > 0) {
       clack.log.info(`Images: ${result.images.length} SVG(s)`);
     }
+    if (result.pngImages.length > 0) {
+      clack.log.info(`PNGs: ${result.pngImages.length} PNG(s)`);
+    }
 
     const ctx = result.context;
     if (ctx.schematicComponents) {
       clack.log.info(`Schematic: ${ctx.schematicComponents.length} components`);
+    }
+    if (ctx.nets) {
+      clack.log.info(`Nets: ${ctx.nets.length} net(s)`);
     }
     if (ctx.bom) {
       clack.log.info(
@@ -29,6 +35,14 @@ function renderReviewResult(result: ReviewContext): void {
         drcColor(`DRC: ${ctx.drc.violations} violations, ${ctx.drc.unconnected} unconnected`),
       );
     }
+    if (ctx.netsTextPath) {
+      clack.log.info(`Nets text: ${pc.cyan(ctx.netsTextPath)}`);
+    }
+    if (ctx.warnings) {
+      for (const warning of ctx.warnings) {
+        clack.log.warn(warning);
+      }
+    }
 
     clack.log.info(`Context JSON: ${pc.cyan(result.contextJsonPath)}`);
   } else {
@@ -36,6 +50,18 @@ function renderReviewResult(result: ReviewContext): void {
     console.log(`output: ${result.outputDir}`);
     for (const img of result.images) {
       console.log(`image: ${img}`);
+    }
+    for (const png of result.pngImages) {
+      console.log(`png: ${png}`);
+    }
+    if (result.context.nets) {
+      console.log(`nets: ${result.context.nets.length}`);
+    }
+    if (result.context.netsTextPath) {
+      console.log(`nets_text: ${result.context.netsTextPath}`);
+    }
+    for (const warning of result.context.warnings ?? []) {
+      console.log(`warning: ${warning}`);
     }
     console.log(`context: ${result.contextJsonPath}`);
   }
