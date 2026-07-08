@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "aaaaaaaa-0002-0002-0002-000000000002",
+      "role": "10k (0603)",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["R1", "R2"],
+      "kicad_footprint": "Resistor_SMD:R_0603_1608Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "bbbbbbbb-0002-0002-0002-000000000002",
+      "role": "1uF (0805)",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["C1"],
+      "kicad_footprint": "Capacitor_SMD:C_0805_2012Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    }
+  ]
+}

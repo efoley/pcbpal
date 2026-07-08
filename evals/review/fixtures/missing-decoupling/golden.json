@@ -1,0 +1,25 @@
+{
+  "id": "missing-decoupling",
+  "defect": "U1 (AMS1117-3.3 LDO) has an output cap C1 but no input/decoupling capacitor on its VIN pin — the datasheet requires a bypass cap near the regulator input.",
+  "target": "schematic",
+  "mustMention": [
+    {
+      "id": "decoupling-role",
+      "regex": "(?i)decoupl|bypass|input cap",
+      "why": "identifies the missing capacitor's role",
+      "sample": "missing input decoupling / bypass capacitor"
+    },
+    {
+      "id": "cap-value",
+      "regex": "(?i)100\\s*nf|0\\.1\\s*[uµ]f",
+      "why": "the conventional 100nF value expected",
+      "sample": "add a 100nF ceramic cap"
+    },
+    {
+      "id": "target-ref",
+      "regex": "\\bU1\\b",
+      "why": "names the affected regulator",
+      "sample": "on the VIN pin of U1"
+    }
+  ]
+}

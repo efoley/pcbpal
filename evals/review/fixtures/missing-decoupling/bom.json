@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "aaaaaaaa-0006-0006-0006-000000000006",
+      "role": "AMS1117-3.3 LDO regulator",
+      "category": "power",
+      "sources": [{ "supplier": "lcsc", "part_number": "C6186" }],
+      "kicad_refs": ["U1"],
+      "kicad_footprint": "Package_TO_SOT_SMD:SOT-223-3_TabPin2",
+      "alternates": [],
+      "status": "selected",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "bbbbbbbb-0006-0006-0006-000000000006",
+      "role": "10uF output cap",
+      "category": "passive",
+      "sources": [{ "supplier": "lcsc", "part_number": "C15850" }],
+      "kicad_refs": ["C1"],
+      "kicad_footprint": "Capacitor_SMD:C_0805_2012Metric",
+      "alternates": [],
+      "status": "selected",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "cccccccc-0006-0006-0006-000000000006",
+      "role": "1k LED resistor",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["R1"],
+      "kicad_footprint": "Resistor_SMD:R_0603_1608Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "dddddddd-0006-0006-0006-000000000006",
+      "role": "Power indicator LED",
+      "category": "led",
+      "sources": [],
+      "kicad_refs": ["D1"],
+      "kicad_footprint": "LED_SMD:LED_0603_1608Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    }
+  ]
+}
