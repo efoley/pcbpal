@@ -1,10 +1,6 @@
 import { join } from "node:path";
 import type { BomDatabase } from "../../schemas/bom.js";
-import {
-  type NetlistComponent,
-  type NetlistNet,
-  exportNetlist,
-} from "../../services/netlist.js";
+import { exportNetlist, type NetlistComponent, type NetlistNet } from "../../services/netlist.js";
 import { findProjectRoot, readBom, readConfig } from "../../services/project.js";
 
 // ── Types ──
@@ -57,10 +53,22 @@ export interface FirmwareDatasheetResult {
 // ── Helpers ──
 
 const MCU_PATTERNS = [
-  /stm32/i, /py32/i, /esp32/i, /rp2040/i, /rp2350/i,
-  /nrf52/i, /nrf53/i, /nrf91/i,
-  /atmega/i, /attiny/i, /samd/i, /sam[de]\d/i,
-  /pic\d/i, /msp430/i, /ch32/i, /gd32/i,
+  /stm32/i,
+  /py32/i,
+  /esp32/i,
+  /rp2040/i,
+  /rp2350/i,
+  /nrf52/i,
+  /nrf53/i,
+  /nrf91/i,
+  /atmega/i,
+  /attiny/i,
+  /samd/i,
+  /sam[de]\d/i,
+  /pic\d/i,
+  /msp430/i,
+  /ch32/i,
+  /gd32/i,
 ];
 
 function isMcu(comp: NetlistComponent): boolean {
@@ -99,7 +107,10 @@ function derivePurpose(
     const comp = componentMap.get(node.ref);
     if (!comp) continue;
 
-    if (isPassiveRef(node.ref)) { passiveRefs.push(node.ref); continue; }
+    if (isPassiveRef(node.ref)) {
+      passiveRefs.push(node.ref);
+      continue;
+    }
     if (isTestPointRef(node.ref)) continue;
 
     const role = bomRoleMap.get(node.ref);
@@ -136,10 +147,7 @@ function netSheet(
  * Identify the source of a power rail — look for regulators, converters,
  * and connectors with power_out pins on this net.
  */
-function identifyPowerSource(
-  net: NetlistNet,
-  componentMap: Map<string, NetlistComponent>,
-): string {
+function identifyPowerSource(net: NetlistNet, componentMap: Map<string, NetlistComponent>): string {
   for (const node of net.nodes) {
     // Pin explicitly marked as power output
     if (node.pinType === "power_out") {
@@ -153,7 +161,12 @@ function identifyPowerSource(
     if (!comp) continue;
     const text = `${comp.description} ${comp.libPart}`.toLowerCase();
     // Regulator/converter output pins
-    if (text.includes("regulator") || text.includes("converter") || text.includes("boost") || text.includes("buck")) {
+    if (
+      text.includes("regulator") ||
+      text.includes("converter") ||
+      text.includes("boost") ||
+      text.includes("buck")
+    ) {
       const fn = node.pinFunction?.toLowerCase() ?? "";
       if (fn.includes("out") || fn.includes("vo") || fn.includes("sw")) {
         return `${node.ref} (${comp.value})`;
@@ -171,7 +184,12 @@ function identifyPowerSource(
 function isConnector(comp: NetlistComponent): boolean {
   if (isTestPointRef(comp.ref)) return false;
   const text = `${comp.value} ${comp.description} ${comp.libPart}`.toLowerCase();
-  return comp.ref.startsWith("J") || text.includes("connector") || text.includes("receptacle") || text.includes("header");
+  return (
+    comp.ref.startsWith("J") ||
+    text.includes("connector") ||
+    text.includes("receptacle") ||
+    text.includes("header")
+  );
 }
 
 function isDebugConnector(comp: NetlistComponent): boolean {
@@ -237,13 +255,12 @@ export async function firmwareDatasheet(
   }
 
   // Build MCU pin table
-  const mcuNets = netlist.nets.filter((n) =>
-    n.nodes.some((nd) => nd.ref === mcuComp.ref),
-  );
+  const mcuNets = netlist.nets.filter((n) => n.nodes.some((nd) => nd.ref === mcuComp.ref));
 
   const pins: McuPin[] = [];
   for (const net of mcuNets) {
-    const mcuNode = net.nodes.find((nd) => nd.ref === mcuComp.ref)!;
+    const mcuNode = net.nodes.find((nd) => nd.ref === mcuComp.ref);
+    if (!mcuNode) continue; // unreachable: mcuNets only contains nets touching the MCU
     const isUnconnected = net.name.startsWith("unconnected-");
     const others = net.nodes
       .filter((nd) => nd.ref !== mcuComp.ref)
@@ -265,7 +282,7 @@ export async function firmwareDatasheet(
   }
 
   // Sort by pin number
-  pins.sort((a, b) => parseInt(a.pin) - parseInt(b.pin));
+  pins.sort((a, b) => parseInt(a.pin, 10) - parseInt(b.pin, 10));
 
   const freeGpios = pins.filter((p) => p.isUnconnected);
 
@@ -309,15 +326,14 @@ export async function firmwareDatasheet(
 
   const allConnectors = netlist.components.filter(isConnector);
   for (const conn of allConnectors) {
-    const connNets = netlist.nets.filter((n) =>
-      n.nodes.some((nd) => nd.ref === conn.ref),
-    );
+    const connNets = netlist.nets.filter((n) => n.nodes.some((nd) => nd.ref === conn.ref));
     const info: ConnectorInfo = {
       ref: conn.ref,
       description: `${conn.value} — ${conn.description}`,
-      pins: connNets.map((n) => {
-        const node = n.nodes.find((nd) => nd.ref === conn.ref)!;
-        return { pin: node.pin, net: n.name, function: node.pinFunction || "" };
+      pins: connNets.flatMap((n) => {
+        // connNets only contains nets touching this connector, so find always hits
+        const node = n.nodes.find((nd) => nd.ref === conn.ref);
+        return node ? [{ pin: node.pin, net: n.name, function: node.pinFunction || "" }] : [];
       }),
     };
 
@@ -392,7 +408,8 @@ function generateMarkdown(data: {
   includeTestPoints?: boolean;
 }): string {
   const lines: string[] = [];
-  const { mcu, pins, freeGpios, powerRails, powerNetNames, debugInterfaces, connectors, sheets } = data;
+  const { mcu, pins, freeGpios, powerRails, powerNetNames, debugInterfaces, connectors, sheets } =
+    data;
 
   lines.push(`# ${data.projectName} — Firmware Reference`);
   lines.push("");
@@ -421,9 +438,7 @@ function generateMarkdown(data: {
   if (freeGpios.length > 0) {
     lines.push("## Unconnected Pins");
     lines.push("");
-    lines.push(
-      freeGpios.map((p) => `- **${p.function}** (pin ${p.pin})`).join("\n"),
-    );
+    lines.push(freeGpios.map((p) => `- **${p.function}** (pin ${p.pin})`).join("\n"));
     lines.push("");
   }
 
@@ -434,9 +449,10 @@ function generateMarkdown(data: {
     lines.push("| Rail | Source | Loads |");
     lines.push("|------|--------|-------|");
     for (const rail of powerRails) {
-      const loads = rail.loads.length > 10
-        ? `${rail.loads.slice(0, 10).join(", ")}... (${rail.loads.length} total)`
-        : rail.loads.join(", ");
+      const loads =
+        rail.loads.length > 10
+          ? `${rail.loads.slice(0, 10).join(", ")}... (${rail.loads.length} total)`
+          : rail.loads.join(", ");
       lines.push(`| ${rail.net} | ${rail.source || "—"} | ${loads} |`);
     }
     lines.push("");

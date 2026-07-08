@@ -2,6 +2,7 @@ import { exists } from "node:fs/promises";
 import { join } from "node:path";
 import { detectPdfTools } from "../../services/pdf.js";
 import { findProjectRoot, readBom, readConfig, readProduction } from "../../services/project.js";
+import { svgToolAvailable } from "../../services/svg.js";
 
 export interface CheckResult {
   name: string;
@@ -167,6 +168,17 @@ export async function runDoctor(): Promise<DoctorResult> {
   });
 
   const allOk = checks.every((c) => c.ok);
+
+  // Check 9: rsvg-convert available. Non-fatal — only needed for PNG
+  // renders of review SVGs, so it's excluded from `ok` above.
+  const rsvgOk = await svgToolAvailable();
+  checks.push({
+    name: "rsvg-convert",
+    ok: rsvgOk,
+    message: rsvgOk
+      ? "Found"
+      : "Not found — PNG review renders disabled. Install with: apt install librsvg2-bin",
+  });
 
   return { ok: allOk, root, checks };
 }
