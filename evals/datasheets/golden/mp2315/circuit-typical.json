@@ -1,0 +1,88 @@
+{
+  "golden_version": 1,
+  "verified": false,
+  "verified_by": null,
+  "notes": "DRAFT authored from general knowledge — verify against the actual PDF before trusting scores. Reuses the MP2315-style synchronous buck shape from src/services/refcircuit-compare.test.ts: input/output caps, bootstrap cap, inductor, feedback divider. IC pins named (IN/SW/GND/FB/EN/BST).",
+  "extraction": {
+    "schema_version": 1,
+    "facet": "circuit",
+    "device": "MP2315",
+    "payload": {
+      "device": "MP2315",
+      "title": "Typical Application",
+      "provenance": { "page": 12, "label": "Figure 1" },
+      "rails": ["VIN", "VOUT", "GND"],
+      "confidence": "high",
+      "notes": [],
+      "components": [
+        {
+          "designator": "U1",
+          "kind": "ic",
+          "value": "MP2315",
+          "pins": [
+            { "pin": "IN", "connects_to": ["VIN", "C1.1"] },
+            { "pin": "SW", "connects_to": ["L1.1", "C3.2"] },
+            { "pin": "GND", "connects_to": ["GND"] },
+            { "pin": "FB", "connects_to": ["R1.2", "R2.1"] },
+            { "pin": "EN", "connects_to": ["VIN"] },
+            { "pin": "BST", "connects_to": ["C3.1"] }
+          ]
+        },
+        {
+          "designator": "C1",
+          "kind": "capacitor",
+          "value": "10µF",
+          "pins": [
+            { "pin": "1", "connects_to": ["VIN", "U1.IN"] },
+            { "pin": "2", "connects_to": ["GND"] }
+          ]
+        },
+        {
+          "designator": "C2",
+          "kind": "capacitor",
+          "value": "22µF",
+          "pins": [
+            { "pin": "1", "connects_to": ["VOUT", "L1.2"] },
+            { "pin": "2", "connects_to": ["GND"] }
+          ]
+        },
+        {
+          "designator": "C3",
+          "kind": "capacitor",
+          "value": "100nF",
+          "pins": [
+            { "pin": "1", "connects_to": ["U1.BST"] },
+            { "pin": "2", "connects_to": ["U1.SW", "L1.1"] }
+          ]
+        },
+        {
+          "designator": "L1",
+          "kind": "inductor",
+          "value": "2.2µH",
+          "pins": [
+            { "pin": "1", "connects_to": ["U1.SW", "C3.2"] },
+            { "pin": "2", "connects_to": ["VOUT", "C2.1"] }
+          ]
+        },
+        {
+          "designator": "R1",
+          "kind": "resistor",
+          "value": "100k",
+          "pins": [
+            { "pin": "1", "connects_to": ["VOUT"] },
+            { "pin": "2", "connects_to": ["U1.FB", "R2.1"] }
+          ]
+        },
+        {
+          "designator": "R2",
+          "kind": "resistor",
+          "value": "31.6k",
+          "pins": [
+            { "pin": "1", "connects_to": ["U1.FB", "R1.2"] },
+            { "pin": "2", "connects_to": ["GND"] }
+          ]
+        }
+      ]
+    }
+  }
+}

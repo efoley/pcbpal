@@ -8,6 +8,17 @@ export {
 } from "./bom.js";
 export { ProjectConfig } from "./config.js";
 export {
+  DatasheetExtraction,
+  PinEntry,
+  PinTable,
+  Provenance,
+  RefCircuitComponent,
+  ReferenceCircuit,
+  SpecItem,
+  SpecTable,
+  SpecValue,
+} from "./datasheet.js";
+export {
   ControlledImpedance,
   FabHouse,
   FabStackup,

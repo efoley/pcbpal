@@ -7,6 +7,7 @@ bun.lock
 # Claude Code agent worktrees
 .claude/worktrees/
 
-# eval outputs (harness lives on the evals branches)
-evals/results/
+# eval harness: fetched PDFs/renders and timestamped run outputs are not committed
 evals/datasheets/cache/
+evals/results/*
+!evals/results/.gitkeep
