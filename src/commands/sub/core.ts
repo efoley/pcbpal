@@ -2,12 +2,12 @@ import { exists, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { findProjectRoot } from "../../services/project.js";
 import {
-  type SubcircuitBuildResult,
-  type SvgView,
   buildSubcircuit,
   convertToKicadPcb,
   convertToKicadSch,
   renderCircuitSvg,
+  type SubcircuitBuildResult,
+  type SvgView,
 } from "../../services/tscircuit.js";
 
 // ── sub new ──

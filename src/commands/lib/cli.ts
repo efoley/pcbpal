@@ -37,17 +37,25 @@ export function registerLibCommand(program: Command): void {
     .option("--symbol", "Fetch symbol only")
     .option("--footprint", "Fetch footprint only")
     .option("--3d", "Fetch 3D model only")
-    .action(async (lcsc: string, flags: { symbol?: boolean; footprint?: boolean; "3d"?: boolean }) => {
-      try {
-        const result = await runWithSpinner(
-          () => libFetch({ lcsc, symbol: flags.symbol, footprint: flags.footprint, model3d: flags["3d"] }),
-          `Fetching ${lcsc}...`,
-        );
-        output(result, renderFetchResult);
-      } catch (e) {
-        fatal((e as Error).message);
-      }
-    });
+    .action(
+      async (lcsc: string, flags: { symbol?: boolean; footprint?: boolean; "3d"?: boolean }) => {
+        try {
+          const result = await runWithSpinner(
+            () =>
+              libFetch({
+                lcsc,
+                symbol: flags.symbol,
+                footprint: flags.footprint,
+                model3d: flags["3d"],
+              }),
+            `Fetching ${lcsc}...`,
+          );
+          output(result, renderFetchResult);
+        } catch (e) {
+          fatal((e as Error).message);
+        }
+      },
+    );
 
   lib
     .command("install")
@@ -108,7 +116,9 @@ function renderAssignFootprintResult(result: LibAssignFootprintResult): void {
 function renderListResult(result: LibListResult): void {
   if (result.symbols.length === 0) {
     if (isInteractive()) {
-      clack.log.info("No symbols in pcbpal library. Run `pcbpal lib fetch` then `pcbpal lib install`.");
+      clack.log.info(
+        "No symbols in pcbpal library. Run `pcbpal lib fetch` then `pcbpal lib install`.",
+      );
     } else {
       console.log("(empty)");
     }
@@ -123,14 +133,13 @@ function renderListResult(result: LibListResult): void {
     String(s.pinCount),
   ]);
 
-  const widths = header.map((h, i) =>
-    Math.max(h.length, ...rows.map((r) => r[i].replace(/\x1b\[[^m]*m/g, "").length)),
-  );
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping ANSI color escapes
+  const ansiEscapes = /\x1b\[[^m]*m/g;
+  const visibleLength = (s: string): number => s.replace(ansiEscapes, "").length;
+
+  const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => visibleLength(r[i]))));
   const line = (cells: string[]) =>
-    cells.map((c, i) => {
-      const visible = c.replace(/\x1b\[[^m]*m/g, "").length;
-      return c + " ".repeat(Math.max(0, widths[i] - visible));
-    }).join("  ");
+    cells.map((c, i) => c + " ".repeat(Math.max(0, widths[i] - visibleLength(c)))).join("  ");
 
   if (isInteractive()) {
     console.log(pc.bold(line(header)));

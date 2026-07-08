@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { exists } from "node:fs/promises";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
-import type { BomCategory, BomDatabase, BomEntry } from "../../schemas/bom.js";
+import type { BomCategory, BomEntry } from "../../schemas/bom.js";
 import { type KicadComponent, readSchematicComponents } from "../../services/kicad.js";
 import { lookupPart } from "../../services/lcsc.js";
 import { findProjectRoot, readBom, readConfig, writeBom } from "../../services/project.js";
@@ -47,9 +47,7 @@ export interface SyncOptions {
  * Group schematic components by (value, footprint) — these represent
  * the same physical part used in multiple places.
  */
-function groupComponents(
-  components: KicadComponent[],
-): Map<string, KicadComponent[]> {
+function groupComponents(components: KicadComponent[]): Map<string, KicadComponent[]> {
   const groups = new Map<string, KicadComponent[]>();
   for (const comp of components) {
     // Skip components with no footprint (power symbols, etc.)
@@ -102,9 +100,7 @@ function buildRole(comp: KicadComponent): string {
 /**
  * Read the JLCPCB plugin DB to get ref→LCSC mappings.
  */
-async function readJlcpcbMappings(
-  projectDir: string,
-): Promise<Map<string, string>> {
+async function readJlcpcbMappings(projectDir: string): Promise<Map<string, string>> {
   const dbPath = join(projectDir, "jlcpcb", "project.db");
   if (!(await exists(dbPath))) return new Map();
 
@@ -304,7 +300,10 @@ export async function bomSync(
       let lcsc: string | null = null;
       for (const ref of refs) {
         const l = jlcpcbMap.get(ref);
-        if (l) { lcsc = l; break; }
+        if (l) {
+          lcsc = l;
+          break;
+        }
       }
 
       const category = inferCategory(sample.libId, sample.ref);
@@ -346,9 +345,7 @@ export async function bomSync(
         description,
         manufacturer,
         mpn,
-        sources: lcsc
-          ? [{ supplier: "lcsc", part_number: lcsc, last_checked: now }]
-          : [],
+        sources: lcsc ? [{ supplier: "lcsc", part_number: lcsc, last_checked: now }] : [],
         datasheet_url: datasheetUrl,
         kicad_refs: refs,
         kicad_footprint: sample.footprint,
@@ -378,8 +375,7 @@ export async function bomSync(
     await writeBom(root, bom);
   }
 
-  const unchanged =
-    bom.entries.length - added.length - updated.length - orphaned.length;
+  const unchanged = bom.entries.length - added.length - updated.length - orphaned.length;
 
   return {
     ok: true,

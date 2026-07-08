@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  lint:
+    name: Format & lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - name: biome (src)
+        run: bunx biome ci src/
+      - name: biome (evals, when present)
+        run: |
+          if [ -d evals/src ]; then bunx biome ci evals/; fi
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bunx tsc --noEmit
+      - name: typecheck evals (when present)
+        run: |
+          if [ -f evals/tsconfig.json ]; then bunx tsc --noEmit -p evals/tsconfig.json; fi
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install PDF/SVG tooling used by optional test suites
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils librsvg2-bin
+      - run: bun install
+      - run: bun test
+      - name: eval harness offline plumbing check (when present)
+        run: |
+          if [ -f evals/src/run.ts ]; then bun evals/src/run.ts --dry-run; fi
+      - name: bom-sync eval suite (when present)
+        run: |
+          if [ -f evals/bom-sync/run.ts ]; then bun evals/bom-sync/run.ts; fi

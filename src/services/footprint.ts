@@ -1,4 +1,4 @@
-import { exists, readFile, readdir } from "node:fs/promises";
+import { exists, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
@@ -63,9 +63,7 @@ export function parseKicadMod(content: string): FootprintGeometry {
       }
     }
     const flat = content.slice(start, end).replace(/\n\s*/g, " ");
-    const lineMatch = flat.match(
-      /\(pad\s+"?(\w+)"?\s+(smd|thru_hole)\s+(\w+)\s+(.+)/,
-    );
+    const lineMatch = flat.match(/\(pad\s+"?(\w+)"?\s+(smd|thru_hole)\s+(\w+)\s+(.+)/);
     if (!lineMatch) continue;
     const [, num, type, shape, body] = lineMatch;
 
@@ -119,10 +117,7 @@ export function parseKicadMod(content: string): FootprintGeometry {
   return {
     name,
     pads,
-    bbox:
-      pads.length > 0
-        ? { minX, minY, maxX, maxY }
-        : { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+    bbox: pads.length > 0 ? { minX, minY, maxX, maxY } : { minX: 0, minY: 0, maxX: 0, maxY: 0 },
     courtyard,
   };
 }
@@ -164,9 +159,7 @@ export function compareFootprints(
   const bboxSimilar = wRatio < 1.2 && hRatio < 1.2;
 
   if (!padCountMatch) {
-    padIssues.push(
-      `Pad count: KiCad has ${kicad.pads.length}, LCSC has ${lcsc.pads.length}`,
-    );
+    padIssues.push(`Pad count: KiCad has ${kicad.pads.length}, LCSC has ${lcsc.pads.length}`);
   }
 
   if (!bboxSimilar) {
@@ -197,11 +190,8 @@ export function compareFootprints(
       }
 
       // Size comparison (tolerance 20%)
-      const wRatio =
-        Math.max(kPad.width, lPad.width) / Math.min(kPad.width, lPad.width);
-      const hRatio =
-        Math.max(kPad.height, lPad.height) /
-        Math.min(kPad.height, lPad.height);
+      const wRatio = Math.max(kPad.width, lPad.width) / Math.min(kPad.width, lPad.width);
+      const hRatio = Math.max(kPad.height, lPad.height) / Math.min(kPad.height, lPad.height);
       if (wRatio > 1.3 || hRatio > 1.3) {
         padIssues.push(
           `Pad ${num} size: KiCad ${kPad.width.toFixed(2)}x${kPad.height.toFixed(2)}mm vs LCSC ${lPad.width.toFixed(2)}x${lPad.height.toFixed(2)}mm`,
@@ -299,10 +289,7 @@ export async function resolveFootprintPath(
   const [lib, name] = libraryRef.split(":");
   if (!lib || !name) return null;
 
-  const searchDirs = [
-    "/usr/share/kicad/footprints",
-    ...(extraLibDirs ?? []),
-  ];
+  const searchDirs = ["/usr/share/kicad/footprints", ...(extraLibDirs ?? [])];
 
   for (const dir of searchDirs) {
     const modPath = join(dir, `${lib}.pretty`, `${name}.kicad_mod`);

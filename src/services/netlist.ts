@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // ── Types ──
 
@@ -41,7 +41,7 @@ export interface Netlist {
 
 // ── Simple XML tag parser (avoids npm dependency) ──
 
-function extractTag(xml: string, tag: string, start = 0): { content: string; end: number } | null {
+function _extractTag(xml: string, tag: string, start = 0): { content: string; end: number } | null {
   const openTag = `<${tag}`;
   const idx = xml.indexOf(openTag, start);
   if (idx === -1) return null;
@@ -82,11 +82,10 @@ export function parseNetlistXml(xml: string): Netlist {
 
   // Parse sheets
   const sheetRegex = /<sheet\s+number="(\d+)"\s+name="([^"]*)"[^>]*>/g;
-  let sheetMatch: RegExpExecArray | null;
-  while ((sheetMatch = sheetRegex.exec(xml)) !== null) {
+  for (const sheetMatch of xml.matchAll(sheetRegex)) {
     const sheetBlock = xml.slice(sheetMatch.index, xml.indexOf("</sheet>", sheetMatch.index) + 8);
     sheets.push({
-      number: parseInt(sheetMatch[1]),
+      number: parseInt(sheetMatch[1], 10),
       name: sheetMatch[2],
       source: extractTagValue(sheetBlock, "source"),
     });
@@ -94,8 +93,7 @@ export function parseNetlistXml(xml: string): Netlist {
 
   // Parse components
   const compRegex = /<comp\s+ref="([^"]+)">/g;
-  let compMatch: RegExpExecArray | null;
-  while ((compMatch = compRegex.exec(xml)) !== null) {
+  for (const compMatch of xml.matchAll(compRegex)) {
     const compEnd = xml.indexOf("</comp>", compMatch.index);
     const block = xml.slice(compMatch.index, compEnd);
 
@@ -116,15 +114,13 @@ export function parseNetlistXml(xml: string): Netlist {
 
   // Parse nets
   const netRegex = /<net\s+code="(\d+)"\s+name="([^"]*)"[^>]*>/g;
-  let netMatch: RegExpExecArray | null;
-  while ((netMatch = netRegex.exec(xml)) !== null) {
+  for (const netMatch of xml.matchAll(netRegex)) {
     const netEnd = xml.indexOf("</net>", netMatch.index);
     const block = xml.slice(netMatch.index, netEnd);
 
     const nodes: NetlistNode[] = [];
     const nodeRegex = /<node\s+([^>]+)\/>/g;
-    let nodeMatch: RegExpExecArray | null;
-    while ((nodeMatch = nodeRegex.exec(block)) !== null) {
+    for (const nodeMatch of block.matchAll(nodeRegex)) {
       const attrs = nodeMatch[1];
       nodes.push({
         ref: extractAttr(attrs, "ref"),
@@ -135,7 +131,7 @@ export function parseNetlistXml(xml: string): Netlist {
     }
 
     nets.push({
-      code: parseInt(netMatch[1]),
+      code: parseInt(netMatch[1], 10),
       name: netMatch[2],
       nodes,
     });

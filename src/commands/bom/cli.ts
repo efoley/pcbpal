@@ -3,6 +3,7 @@ import type { Command } from "commander";
 import pc from "picocolors";
 import { isInteractive } from "../../cli/context.js";
 import { fatal, output } from "../../cli/output.js";
+import { type BomCheckResult, bomCheck } from "./check.js";
 import {
   type BomAddResult,
   type BomLinkResult,
@@ -13,9 +14,8 @@ import {
   bomRemove,
   bomShow,
 } from "./core.js";
-import { type BomCheckResult, type BomIssue, bomCheck } from "./check.js";
 import { type FpCheckResult, footprintCheck } from "./footprint-check.js";
-import { type SyncResult, bomSync } from "./sync.js";
+import { bomSync, type SyncResult } from "./sync.js";
 
 function renderBomTable(result: BomShowResult): void {
   if (result.entries.length === 0) {
@@ -113,7 +113,12 @@ function renderCheckResult(result: BomCheckResult): void {
 
     for (const i of result.issues) {
       const refStr = i.refs.length > 0 ? ` [${i.refs.join(", ")}]` : "";
-      const prefix = i.severity === "error" ? pc.red("ERR") : i.severity === "warning" ? pc.yellow("WARN") : pc.dim("INFO");
+      const prefix =
+        i.severity === "error"
+          ? pc.red("ERR")
+          : i.severity === "warning"
+            ? pc.yellow("WARN")
+            : pc.dim("INFO");
       console.log(`  ${prefix} ${pc.bold(i.entry_role)}${pc.dim(refStr)}: ${i.message}`);
     }
   } else {
@@ -230,7 +235,7 @@ export function registerBomCommand(program: Command): void {
           { offline: opts.offline, fromJlcpcb: opts.fromJlcpcb },
           spinner
             ? (checked, total) => {
-                spinner!.message(`Checking parts ${checked}/${total}...`);
+                spinner?.message(`Checking parts ${checked}/${total}...`);
               }
             : undefined,
         );
@@ -249,32 +254,30 @@ export function registerBomCommand(program: Command): void {
     .option("--refs <refs>", "Only check specific refs (comma-separated)")
     .option("--no-render", "Skip SVG rendering")
     .option("--from-jlcpcb", "Read BOM from jlcpcb/project.db")
-    .action(
-      async (opts: { refs?: string; render?: boolean; fromJlcpcb?: boolean }) => {
-        try {
-          let spinner: ReturnType<typeof clack.spinner> | null = null;
-          if (isInteractive()) {
-            spinner = clack.spinner();
-            spinner.start("Checking footprints...");
-          }
-
-          const result = await footprintCheck(
-            {
-              refs: opts.refs?.split(",").map((r) => r.trim()),
-              noRender: opts.render === false,
-              fromJlcpcb: opts.fromJlcpcb,
-            },
-            spinner ? (msg) => spinner!.message(msg) : undefined,
-          );
-
-          if (spinner) spinner.stop("Done");
-          output(result, renderFpCheckResult);
-          if (!result.ok) process.exit(1);
-        } catch (e) {
-          fatal((e as Error).message);
+    .action(async (opts: { refs?: string; render?: boolean; fromJlcpcb?: boolean }) => {
+      try {
+        let spinner: ReturnType<typeof clack.spinner> | null = null;
+        if (isInteractive()) {
+          spinner = clack.spinner();
+          spinner.start("Checking footprints...");
         }
-      },
-    );
+
+        const result = await footprintCheck(
+          {
+            refs: opts.refs?.split(",").map((r) => r.trim()),
+            noRender: opts.render === false,
+            fromJlcpcb: opts.fromJlcpcb,
+          },
+          spinner ? (msg) => spinner?.message(msg) : undefined,
+        );
+
+        if (spinner) spinner.stop("Done");
+        output(result, renderFpCheckResult);
+        if (!result.ok) process.exit(1);
+      } catch (e) {
+        fatal((e as Error).message);
+      }
+    });
 
   bom
     .command("sync")
@@ -291,7 +294,7 @@ export function registerBomCommand(program: Command): void {
 
         const result = await bomSync(
           { dryRun: opts.dryRun, online: opts.online },
-          spinner ? (msg) => spinner!.message(msg) : undefined,
+          spinner ? (msg) => spinner?.message(msg) : undefined,
         );
 
         if (spinner) spinner.stop("Done");
@@ -304,17 +307,13 @@ export function registerBomCommand(program: Command): void {
 
 function renderSyncResult(result: SyncResult): void {
   if (isInteractive()) {
-    clack.log.info(
-      `Schematic: ${result.schematicComponents} components`,
-    );
+    clack.log.info(`Schematic: ${result.schematicComponents} components`);
 
     if (result.added.length > 0) {
       clack.log.success(`Added ${result.added.length} new BOM entries:`);
       for (const a of result.added) {
         const lcscStr = a.lcsc ? pc.dim(` (${a.lcsc})`) : "";
-        console.log(
-          `  ${pc.green("+")} ${pc.bold(a.role)} [${a.refs.join(", ")}]${lcscStr}`,
-        );
+        console.log(`  ${pc.green("+")} ${pc.bold(a.role)} [${a.refs.join(", ")}]${lcscStr}`);
       }
     }
 
@@ -368,7 +367,9 @@ function renderFpCheckResult(result: FpCheckResult): void {
 
   for (const entry of result.entries) {
     if (entry.error) {
-      console.log(`  ${pc.yellow("?")} ${pc.bold(entry.ref)} ${pc.dim(entry.kicadFootprint)}: ${entry.error}`);
+      console.log(
+        `  ${pc.yellow("?")} ${pc.bold(entry.ref)} ${pc.dim(entry.kicadFootprint)}: ${entry.error}`,
+      );
       continue;
     }
 
@@ -379,7 +380,9 @@ function renderFpCheckResult(result: FpCheckResult): void {
     const pads = `${entry.comparison.kicadPadCount}/${entry.comparison.lcscPadCount} pads`;
 
     if (isInteractive()) {
-      console.log(`  ${label} ${pc.bold(entry.ref)} ${pc.dim(`${entry.value} — ${entry.kicadFootprint}`)} [${pads}]`);
+      console.log(
+        `  ${label} ${pc.bold(entry.ref)} ${pc.dim(`${entry.value} — ${entry.kicadFootprint}`)} [${pads}]`,
+      );
     } else {
       console.log(`${entry.comparison.summary} ${entry.ref} ${entry.kicadFootprint} [${pads}]`);
     }
