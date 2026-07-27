@@ -1,0 +1,18 @@
+[
+  {
+    "ref": "R1",
+    "footprint": "Resistor_SMD:R_0603_1608Metric",
+    "value": "10k",
+    "libId": "Device:R",
+    "description": "Resistor",
+    "datasheet": "~"
+  },
+  {
+    "ref": "C1",
+    "footprint": "Capacitor_SMD:C_0402_1005Metric",
+    "value": "100nF",
+    "libId": "Device:C",
+    "description": "Unpolarized capacitor",
+    "datasheet": "~"
+  }
+]

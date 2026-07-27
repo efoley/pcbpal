@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "aaaaaaaa-0004-0004-0004-000000000004",
+      "role": "10k (0603)",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["R1"],
+      "kicad_footprint": "Resistor_SMD:R_0603_1608Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "bbbbbbbb-0004-0004-0004-000000000004",
+      "role": "100nF (0402)",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["C1"],
+      "kicad_footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "cccccccc-0004-0004-0004-000000000004",
+      "role": "Removed op-amp U9",
+      "category": "ic",
+      "sources": [],
+      "kicad_refs": ["U9"],
+      "kicad_footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    }
+  ]
+}

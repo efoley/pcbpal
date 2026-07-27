@@ -1,0 +1,25 @@
+{
+  "id": "swapped-feedback",
+  "defect": "The TPS62130 feedback divider is inverted vs the datasheet: R1 (100k) sits top (VOUT→FB) and R2 (560k) bottom (FB→GND). With FB=0.8V this sets VOUT ≈ 0.8 * (1 + 100k/560k) ≈ 0.94V instead of the intended rail — the resistors are swapped, producing the wrong output voltage.",
+  "target": "schematic",
+  "mustMention": [
+    {
+      "id": "feedback-divider",
+      "regex": "(?i)feedback (divider|resistor)|divider",
+      "why": "identifies the feedback divider as the problem area",
+      "sample": "the feedback divider ratio is wrong"
+    },
+    {
+      "id": "swapped-refs",
+      "regex": "(?i)(swap|revers|invert).*(r1|r2)|(r1|r2).*(swap|revers|invert)",
+      "why": "names R1/R2 as swapped",
+      "sample": "R1 and R2 appear swapped"
+    },
+    {
+      "id": "output-voltage",
+      "regex": "(?i)output voltage|v\\s?out|wrong.*voltage",
+      "why": "explains the consequence is an incorrect output voltage",
+      "sample": "resulting in the wrong output voltage (Vout)"
+    }
+  ]
+}

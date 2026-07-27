@@ -1,0 +1,27 @@
+(kicad_sch
+	(version 20231120)
+	(symbol
+		(lib_id "Device:R")
+		(property "Reference" "R1")
+		(property "Value" "10k")
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric")
+		(property "Description" "Resistor")
+		(property "Datasheet" "~")
+	)
+	(symbol
+		(lib_id "Device:C")
+		(property "Reference" "C1")
+		(property "Value" "100nF")
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric")
+		(property "Description" "Unpolarized capacitor")
+		(property "Datasheet" "~")
+	)
+	(symbol
+		(lib_id "Regulator_Linear:AMS1117-3.3")
+		(property "Reference" "U1")
+		(property "Value" "AMS1117-3.3")
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-223-3_TabPin2")
+		(property "Description" "1A Low Dropout regulator, 3.3V fixed output")
+		(property "Datasheet" "http://www.advanced-monolithic.com/pdf/ds1117.pdf")
+	)
+)

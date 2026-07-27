@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "query": "USB-C 16pin receptacle",
+  "recorded_at": "2026-07-06T00:00:00.000Z",
+  "hits": [
+    {
+      "lcsc": "C165948",
+      "mpn": "TYPE-C-31-M-12",
+      "manufacturer": "Korean Hroparts Elec",
+      "description": "16P USB Type-C Receptacle SMD Connector, power + CC",
+      "package": "SMD",
+      "stock": 210000,
+      "unit_price_usd": 0.083,
+      "library_type": "basic",
+      "has_footprint": true,
+      "has_symbol": true
+    },
+    {
+      "lcsc": "C2765186",
+      "mpn": "TYPE-C-31-M-17",
+      "manufacturer": "Korean Hroparts Elec",
+      "description": "16-pin USB Type-C receptacle connector, SMD/DIP hybrid",
+      "package": "SMD",
+      "stock": 88000,
+      "unit_price_usd": 0.091,
+      "library_type": "extended",
+      "has_footprint": true,
+      "has_symbol": true
+    },
+    {
+      "lcsc": "C319148",
+      "mpn": "U-F-M06P-VM-4",
+      "manufacturer": "XKB Connectivity",
+      "description": "6P USB Type-C receptacle, power only",
+      "package": "SMD",
+      "stock": 150000,
+      "unit_price_usd": 0.061,
+      "library_type": "extended",
+      "has_footprint": true,
+      "has_symbol": true
+    }
+  ]
+}
