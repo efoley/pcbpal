@@ -1,0 +1,11 @@
+{
+  "refToEntry": {
+    "R1": "aaaaaaaa-0001-0001-0001-000000000001",
+    "C1": "bbbbbbbb-0001-0001-0001-000000000001",
+    "U1": "cccccccc-0001-0001-0001-000000000001"
+  },
+  "unmatchedSchRefs": [],
+  "footprintMismatches": [],
+  "ambiguousRefs": [],
+  "orphanedEntryIds": []
+}

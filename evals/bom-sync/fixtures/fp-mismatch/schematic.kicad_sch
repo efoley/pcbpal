@@ -1,0 +1,11 @@
+(kicad_sch
+	(version 20231120)
+	(symbol
+		(lib_id "Device:C")
+		(property "Reference" "C5")
+		(property "Value" "10uF")
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric")
+		(property "Description" "Unpolarized capacitor")
+		(property "Datasheet" "~")
+	)
+)

@@ -1,0 +1,47 @@
+{
+  "bom-sync:clean-1to1": {
+    "headline": 1,
+    "metrics": {
+      "exact": true,
+      "pair_f1": 1,
+      "pair_precision": 1,
+      "pair_recall": 1
+    }
+  },
+  "bom-sync:fp-mismatch": {
+    "headline": 1,
+    "metrics": {
+      "exact": true,
+      "pair_f1": 1,
+      "pair_precision": 1,
+      "pair_recall": 1
+    }
+  },
+  "bom-sync:missing-in-bom": {
+    "headline": 1,
+    "metrics": {
+      "exact": true,
+      "pair_f1": 1,
+      "pair_precision": 1,
+      "pair_recall": 1
+    }
+  },
+  "bom-sync:multi-ref": {
+    "headline": 1,
+    "metrics": {
+      "exact": true,
+      "pair_f1": 1,
+      "pair_precision": 1,
+      "pair_recall": 1
+    }
+  },
+  "bom-sync:orphan-bom": {
+    "headline": 1,
+    "metrics": {
+      "exact": true,
+      "pair_f1": 1,
+      "pair_precision": 1,
+      "pair_recall": 1
+    }
+  }
+}
