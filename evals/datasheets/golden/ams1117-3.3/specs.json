@@ -1,0 +1,88 @@
+{
+  "golden_version": 1,
+  "verified": false,
+  "verified_by": null,
+  "notes": "DRAFT authored from general knowledge — verify against the actual PDF before trusting scores. Mixes an absolute-maximum item (VIN) into an electrical_characteristics table for convenience; split by section when hand-verifying.",
+  "extraction": {
+    "schema_version": 1,
+    "facet": "specs",
+    "device": "AMS1117-3.3",
+    "payload": {
+      "device": "AMS1117-3.3",
+      "section": "electrical_characteristics",
+      "items": [
+        {
+          "parameter": "Output Voltage",
+          "symbol": "VO",
+          "value": {
+            "min": 3.267,
+            "typ": 3.3,
+            "max": 3.333,
+            "unit": "V",
+            "conditions": "IOUT=0-800mA, VIN=4.75V-12V, TA=25°C"
+          },
+          "provenance": { "page": 4, "label": "Electrical Characteristics" },
+          "confidence": "high"
+        },
+        {
+          "parameter": "Dropout Voltage",
+          "symbol": "VDROP",
+          "value": {
+            "typ": 1.1,
+            "max": 1.3,
+            "unit": "V",
+            "conditions": "typ at IOUT=800mA; max at IOUT=1A"
+          },
+          "provenance": { "page": 4, "label": "Electrical Characteristics" },
+          "confidence": "high"
+        },
+        {
+          "parameter": "Quiescent Current",
+          "symbol": "IQ",
+          "value": {
+            "typ": 5,
+            "max": 10,
+            "unit": "mA",
+            "conditions": "IOUT=0"
+          },
+          "provenance": { "page": 4, "label": "Electrical Characteristics" },
+          "confidence": "medium"
+        },
+        {
+          "parameter": "Line Regulation",
+          "value": {
+            "typ": 0.2,
+            "max": 0.5,
+            "unit": "%",
+            "conditions": "VIN=4.75V-12V"
+          },
+          "provenance": { "page": 4, "label": "Electrical Characteristics" },
+          "confidence": "medium"
+        },
+        {
+          "parameter": "Load Regulation",
+          "value": {
+            "typ": 0.4,
+            "max": 1.0,
+            "unit": "%",
+            "conditions": "IOUT=0-800mA"
+          },
+          "provenance": { "page": 4, "label": "Electrical Characteristics" },
+          "confidence": "medium"
+        },
+        {
+          "parameter": "Maximum Input Voltage",
+          "symbol": "VIN",
+          "value": {
+            "max": 15,
+            "unit": "V",
+            "conditions": "absolute maximum rating"
+          },
+          "provenance": { "page": 3, "label": "Absolute Maximum Ratings" },
+          "confidence": "high"
+        }
+      ],
+      "not_found": ["Thermal resistance table"]
+    }
+  }
+}

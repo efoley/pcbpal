@@ -1,0 +1,51 @@
+{
+  "golden_version": 1,
+  "verified": false,
+  "verified_by": null,
+  "notes": "DRAFT authored from general knowledge — verify against the actual PDF before trusting scores. Classic LDO typical application: 10µF input cap, 22µF output cap, IC pins named GND/VOUT/VIN.",
+  "extraction": {
+    "schema_version": 1,
+    "facet": "circuit",
+    "device": "AMS1117-3.3",
+    "payload": {
+      "device": "AMS1117-3.3",
+      "title": "Typical Application Circuit",
+      "provenance": { "page": 1, "label": "Figure 1" },
+      "rails": ["VIN", "VOUT", "GND"],
+      "confidence": "high",
+      "notes": [
+        "Output capacitor of at least 22µF (tantalum) is required for output stability."
+      ],
+      "components": [
+        {
+          "designator": "U1",
+          "kind": "ic",
+          "value": "AMS1117-3.3",
+          "pins": [
+            { "pin": "GND", "connects_to": ["GND"] },
+            { "pin": "VOUT", "connects_to": ["VOUT", "C2.1"] },
+            { "pin": "VIN", "connects_to": ["VIN", "C1.1"] }
+          ]
+        },
+        {
+          "designator": "C1",
+          "kind": "capacitor",
+          "value": "10µF",
+          "pins": [
+            { "pin": "1", "connects_to": ["VIN", "U1.VIN"] },
+            { "pin": "2", "connects_to": ["GND"] }
+          ]
+        },
+        {
+          "designator": "C2",
+          "kind": "capacitor",
+          "value": "22µF",
+          "pins": [
+            { "pin": "1", "connects_to": ["VOUT", "U1.VOUT"] },
+            { "pin": "2", "connects_to": ["GND"] }
+          ]
+        }
+      ]
+    }
+  }
+}

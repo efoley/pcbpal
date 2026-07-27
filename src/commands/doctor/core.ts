@@ -1,5 +1,6 @@
 import { exists } from "node:fs/promises";
 import { join } from "node:path";
+import { detectPdfTools } from "../../services/pdf.js";
 import { findProjectRoot, readBom, readConfig, readProduction } from "../../services/project.js";
 import { svgToolAvailable } from "../../services/svg.js";
 
@@ -146,6 +147,25 @@ export async function runDoctor(): Promise<DoctorResult> {
       message: "Not found — install KiCad 9+ for export features",
     });
   }
+
+  // Check 9/10: poppler-utils (pdftoppm/pdftotext) for `pcbpal datasheet` commands.
+  // Non-fatal — datasheet plumbing is optional until that command family is used,
+  // so these are reported for visibility without gating overall doctor health.
+  const pdfTools = await detectPdfTools();
+  checks.push({
+    name: "pdftoppm",
+    ok: pdfTools.pdftoppm,
+    message: pdfTools.pdftoppm
+      ? "Found"
+      : "Not found — install poppler-utils for `pcbpal datasheet pages` rendering",
+  });
+  checks.push({
+    name: "pdftotext",
+    ok: pdfTools.pdftotext,
+    message: pdfTools.pdftotext
+      ? "Found"
+      : "Not found — install poppler-utils for `pcbpal datasheet` text extraction",
+  });
 
   const allOk = checks.every((c) => c.ok);
 

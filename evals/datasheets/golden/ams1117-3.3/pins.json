@@ -1,0 +1,39 @@
+{
+  "golden_version": 1,
+  "verified": false,
+  "verified_by": null,
+  "notes": "DRAFT authored from general knowledge — verify against the actual PDF before trusting scores. SOT-223 package: 3 leads (GND, VOUT, VIN) with VOUT also on the tab (pin 2). The package_pin_count validator warning (223 vs 3) is a known false positive for SOT-223.",
+  "extraction": {
+    "schema_version": 1,
+    "facet": "pins",
+    "device": "AMS1117-3.3",
+    "payload": {
+      "device": "AMS1117-3.3",
+      "package": "SOT-223",
+      "pin_count": 3,
+      "pins": [
+        {
+          "number": "1",
+          "name": "GND",
+          "type": "passive",
+          "description": "Ground / adjust pin",
+          "provenance": { "page": 1, "label": "Pin Configuration" }
+        },
+        {
+          "number": "2",
+          "name": "VOUT",
+          "type": "power_out",
+          "description": "Regulated output voltage (also connected to the tab)",
+          "provenance": { "page": 1, "label": "Pin Configuration" }
+        },
+        {
+          "number": "3",
+          "name": "VIN",
+          "type": "power_in",
+          "description": "Unregulated input voltage",
+          "provenance": { "page": 1, "label": "Pin Configuration" }
+        }
+      ]
+    }
+  }
+}

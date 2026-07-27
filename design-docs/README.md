@@ -11,6 +11,13 @@
   (human-interactive vs LLM-agent-driven). Core/presentation split pattern, context
   detection, JSON output contracts, Claude Code integration via CLAUDE.md.
 
+- **[datasheet_understanding_evals.md](./datasheet_understanding_evals.md)** — Datasheet
+  extraction pipeline (specs, pin tables, application circuits) using LLM sub-agents
+  with provenance-carrying schemas, verification passes, and deterministic
+  cross-checks; plus the eval harness (golden datasets, faithfulness metrics,
+  strategy matrix) that measures extraction fidelity. Expands
+  `notes/datasheet_schematic_ocr.md`.
+
 ### Planned Documents
 
 - **tscircuit_bridge.md** — How pcbpal integrates with the tscircuit ecosystem.

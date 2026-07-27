@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "test": "bun test",
+    "evals": "bun evals/src/run.ts",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "lint": "biome lint .",
@@ -22,7 +23,8 @@
     "commander": "^13.1.0",
     "picocolors": "^1.1.1",
     "tscircuit": "^0.0.1546",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.2",

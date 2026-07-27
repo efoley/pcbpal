@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import { registerBomCommand } from "../commands/bom/cli.js";
+import { registerDatasheetCommand } from "../commands/datasheet/cli.js";
 import { registerDoctorCommand } from "../commands/doctor/cli.js";
 import { registerFirmwareCommand } from "../commands/firmware/cli.js";
 import { registerInitCommand } from "../commands/init/cli.js";
@@ -27,6 +28,7 @@ registerLibCommand(program);
 registerSubCommand(program);
 registerProductionCommand(program);
 registerFirmwareCommand(program);
+registerDatasheetCommand(program);
 registerReviewCommand(program);
 registerDoctorCommand(program);
 
