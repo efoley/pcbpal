@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "aaaaaaaa-0005-0005-0005-000000000005",
+      "role": "10uF (0603)",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["C5"],
+      "kicad_footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    }
+  ]
+}

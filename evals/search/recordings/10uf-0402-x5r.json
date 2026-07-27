@@ -1,0 +1,55 @@
+{
+  "synthetic": true,
+  "query": "10uF 0402 X5R",
+  "recorded_at": "2026-07-06T00:00:00.000Z",
+  "hits": [
+    {
+      "lcsc": "C15525",
+      "mpn": "CL05A106MQ5NUNC",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "description": "10uF ±20% 6.3V X5R 0402 Multilayer Ceramic Capacitors MLCC",
+      "package": "0402",
+      "stock": 812340,
+      "unit_price_usd": 0.0091,
+      "library_type": "basic",
+      "has_footprint": true,
+      "has_symbol": true
+    },
+    {
+      "lcsc": "C52923",
+      "mpn": "TMK105ABJ106MV-F",
+      "manufacturer": "TAIYO YUDEN",
+      "description": "10uF ±20% 6.3V X5R 0402 MLCC",
+      "package": "0402",
+      "stock": 51230,
+      "unit_price_usd": 0.0143,
+      "library_type": "extended",
+      "has_footprint": true,
+      "has_symbol": true
+    },
+    {
+      "lcsc": "C1990",
+      "mpn": "CL05A105KA5NNNC",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "description": "1uF ±10% 25V X5R 0402 MLCC",
+      "package": "0402",
+      "stock": 402000,
+      "unit_price_usd": 0.0018,
+      "library_type": "basic",
+      "has_footprint": true,
+      "has_symbol": true
+    },
+    {
+      "lcsc": "C440198",
+      "mpn": "CL05A106MP5NUNC",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "description": "10uF ±20% 10V X5R 0402 MLCC",
+      "package": "0402",
+      "stock": 128000,
+      "unit_price_usd": 0.0121,
+      "library_type": "extended",
+      "has_footprint": true,
+      "has_symbol": true
+    }
+  ]
+}

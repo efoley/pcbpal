@@ -1,0 +1,32 @@
+{
+  "search:10uf-0402-x5r": {
+    "headline": 1,
+    "metrics": {
+      "hit1": true,
+      "hit5": true,
+      "mrr": 1,
+      "predicate_pass_rate": 1,
+      "forbidden_hit": 0
+    }
+  },
+  "search:3v3-ldo-sot23": {
+    "headline": 0.625,
+    "metrics": {
+      "hit1": false,
+      "hit5": true,
+      "mrr": 0.5,
+      "predicate_pass_rate": 1,
+      "forbidden_hit": 0
+    }
+  },
+  "search:usbc-16p-receptacle": {
+    "headline": 1,
+    "metrics": {
+      "hit1": true,
+      "hit5": true,
+      "mrr": 1,
+      "predicate_pass_rate": 1,
+      "forbidden_hit": 0
+    }
+  }
+}

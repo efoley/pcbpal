@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "aaaaaaaa-0007-0007-0007-000000000007",
+      "role": "TPS62130 3A buck converter",
+      "category": "power",
+      "sources": [{ "supplier": "lcsc", "part_number": "C1234567" }],
+      "kicad_refs": ["U1"],
+      "kicad_footprint": "Package_DFN_QFN:VSON-HR-8-1EP_3x2mm",
+      "alternates": [],
+      "status": "selected",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "bbbbbbbb-0007-0007-0007-000000000007",
+      "role": "2.2uH buck inductor",
+      "category": "inductor",
+      "sources": [{ "supplier": "lcsc", "part_number": "C408412" }],
+      "kicad_refs": ["L1"],
+      "kicad_footprint": "Inductor_SMD:L_3x3",
+      "alternates": [],
+      "status": "selected",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "cccccccc-0007-0007-0007-000000000007",
+      "role": "100k feedback top resistor",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["R1"],
+      "kicad_footprint": "Resistor_SMD:R_0402_1005Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "dddddddd-0007-0007-0007-000000000007",
+      "role": "560k feedback bottom resistor",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["R2"],
+      "kicad_footprint": "Resistor_SMD:R_0402_1005Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    },
+    {
+      "id": "eeeeeeee-0007-0007-0007-000000000007",
+      "role": "10uF output cap",
+      "category": "passive",
+      "sources": [],
+      "kicad_refs": ["C1"],
+      "kicad_footprint": "Capacitor_SMD:C_0805_2012Metric",
+      "alternates": [],
+      "status": "candidate",
+      "added": "2026-07-06T00:00:00.000Z",
+      "updated": "2026-07-06T00:00:00.000Z"
+    }
+  ]
+}
